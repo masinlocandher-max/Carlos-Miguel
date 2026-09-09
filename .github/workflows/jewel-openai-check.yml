@@ -1,0 +1,60 @@
+name: Jewel OpenAI connection check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/jewel-openai-check.yml'
+
+permissions: {}
+
+jobs:
+  check:
+    if: github.repository == 'masinlocandher-max/Carlos-Miguel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify OpenAI authentication without exposing secrets
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: python
+        run: |
+          import os
+          import sys
+          import urllib.request
+          import urllib.error
+
+          key = os.environ.get("OPENAI_API_KEY", "").strip()
+          if not key:
+              print("::error::OPENAI_API_KEY is unavailable. Check the repository Actions secret name and scope.")
+              sys.exit(1)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          request = urllib.request.Request(
+              "https://api.openai.com/v1/models",
+              headers={"Authorization": "Bearer " + key},
+              method="GET",
+          )
+          try:
+              opener = urllib.request.build_opener(NoRedirect)
+              with opener.open(request, timeout=30) as response:
+                  if response.status != 200:
+                      print("::error::OpenAI returned an unexpected status.")
+                      sys.exit(1)
+              print("OpenAI authentication check passed.")
+              print("This does not verify generation, billing, model access, or other Jewel integrations.")
+          except urllib.error.HTTPError as error:
+              messages = {
+                  401: "OpenAI rejected the credential.",
+                  403: "The key is not permitted to list models. Review its project permissions.",
+                  429: "OpenAI rate or usage limit prevented this check.",
+              }
+              print("::error::" + messages.get(error.code, "OpenAI request failed. HTTP " + str(error.code)))
+              sys.exit(1)
+          except Exception:
+              print("::error::Connection check failed. No credential or response data was logged.")
+              sys.exit(1)
