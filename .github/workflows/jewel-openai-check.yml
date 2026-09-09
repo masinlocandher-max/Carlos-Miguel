@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Verify OpenAI authentication without exposing secrets
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.JEWEL_SECRET }}
         shell: python
         run: |
           import os
@@ -27,7 +27,7 @@ jobs:
 
           key = os.environ.get("OPENAI_API_KEY", "").strip()
           if not key:
-              print("::error::OPENAI_API_KEY is unavailable. Check the repository Actions secret name and scope.")
+              print("::error::JEWEL_SECRET is unavailable. Check the repository Actions secret name and scope.")
               sys.exit(1)
 
           class NoRedirect(urllib.request.HTTPRedirectHandler):
