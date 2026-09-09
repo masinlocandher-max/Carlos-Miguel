@@ -4,7 +4,7 @@ Jewel is the active assistant identity. Carlos Miguel is the legacy repository/s
 
 ## Current state
 
-This repository is an implementation starting point, not a working assistant.
+This repository now includes the first interactive Jewel OS visual interface. It is not a connected AI assistant.
 The existing AGENTS.md defines the persona, interface direction and approval rules.
 No email, calendar, Notion, Drive or OpenAI runtime integration is implemented or tested here.
 No deployment was performed by this update.
@@ -17,9 +17,26 @@ A source-linked onboarding handoff has been prepared in the existing Jewel OS No
 
 The runtime must retrieve knowledge through an authenticated backend. Each retrieved record should preserve source ID, source revision, retrieval time, project, sensitivity, access restrictions, verification status and supersession relationships. Do not expose private data through static assets, frontend bundles, build logs or public search indexes.
 
+## Run the visual interface
+
+Requires Node.js 24 and npm.
+
+```sh
+npm ci
+npm run dev
+npm test
+npm run build
+```
+
+For environments that cannot enumerate network interfaces, use `npm run dev -- --host 127.0.0.1`.
+
+The React/TypeScript app uses a live Three.js particle core. Navigation is hidden by default. Focus Mode hides surrounding panels without moving or resizing Jewel. Type `open projects`, `open files`, or `focus mode` to test local command transitions. Voice Profile includes a labeled five-state visual preview. Email, calendar, memory, repository data, voice and AI model connections are not implemented in this interface.
+
+The public core is a neutral procedural particle sphere, not FMB's face. It uses no reference images or derived likeness data. The original facial implementation and assets remain in a private local backup outside the public checkout. See [the public visual specification](docs/JEWEL-VISUAL-SPEC.md) and [sanitization checks](docs/VERIFICATION.md).
+
 ## Implementation handoff
 
-There is no existing application stack. Proposed direction, pending implementation: TypeScript web UI and an authenticated backend with narrow provider adapters. Keep UI, knowledge retrieval and side-effect execution separate. Follow AGENTS.md before editing or deploying.
+Current stack: React, TypeScript, Vite and Three.js. A future authenticated backend should use narrow provider adapters. Keep UI, knowledge retrieval and side-effect execution separate. Follow AGENTS.md before editing or deploying.
 
 1. Enumerate approved Notion/Drive sources with pagination and a coverage manifest in private storage.
 2. Retrieve and reconcile source content; mark partial, inaccessible, historical and conflicting records explicitly.

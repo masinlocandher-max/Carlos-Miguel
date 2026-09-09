@@ -44,3 +44,21 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Jewel visual development
+.env.*
+!.env.example
+.qa/
+
+# Private likeness inputs and outputs must never enter public history
+.private/
+private-assets/
+docs/references/
+docs/previews/
+public/jewel/
+**/*identity-board*
+**/*likeness*
+**/identity.bin
+**/identity.json
+**/filaments.bin
+*.bundle
