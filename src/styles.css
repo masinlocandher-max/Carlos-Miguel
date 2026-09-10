@@ -1177,3 +1177,91 @@ h2 {
     font-size: 15px;
   }
 }
+
+/* A shared stack reserves space for status, actions and transient notices. */
+.command-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.command-zone .core-caption,
+.command-zone .quick-actions {
+  position: static;
+  transform: none;
+  width: auto;
+  min-width: 0;
+}
+.command-zone .quick-actions {
+  justify-content: center;
+}
+.command-zone .core-caption p {
+  margin-top: 8px;
+}
+.command-zone .command-notice {
+  margin: 0;
+}
+.command-zone .command-hint {
+  padding-top: 0;
+  margin-top: -4px;
+}
+.command-bar:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+.focus-mode .brand-group,
+.focus-mode .header-controls > :not(.focus-button),
+.focus-mode .statusbar,
+.focus-mode .quick-actions,
+.focus-mode .core-name,
+.focus-mode .voice-button,
+.focus-mode .command-hint {
+  display: none;
+}
+.focus-mode .topbar {
+  justify-content: flex-end;
+}
+.focus-mode .core-caption p {
+  margin-top: 0;
+}
+@media (max-height: 1000px) {
+  .command-zone .core-name {
+    display: none;
+  }
+  .command-zone .core-caption p {
+    margin-top: 0;
+  }
+}
+@media (max-width: 900px) {
+  .command-bar input {
+    font-size: 16px;
+  }
+  .command-hint,
+  .statusbar,
+  .greeting > p {
+    font-size: 11px;
+  }
+  .focus-button,
+  .quick-actions button,
+  .command-notice {
+    font-size: 12px;
+  }
+  .core-caption p {
+    font-size: 13px;
+  }
+  .quick-actions button {
+    padding: 10px;
+    gap: 5px;
+  }
+}
+@media (max-width: 900px) {
+  .app:has(.command-notice) .context-panel {
+    bottom: calc(62px + var(--command-zone-height, 180px) + 12px);
+  }
+}
+
+@media (max-width: 900px) {
+  .command-notice .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}

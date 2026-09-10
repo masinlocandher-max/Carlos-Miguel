@@ -1,6 +1,8 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { ArrowUp, Mic, X } from 'lucide-react';
 export function CommandBar({
+  children,
   value,
   onChange,
   onSubmit,
@@ -11,6 +13,7 @@ export function CommandBar({
   notice,
   clearNotice,
 }: {
+  children?: ReactNode;
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
@@ -22,8 +25,24 @@ export function CommandBar({
   clearNotice: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const zone = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = zone.current;
+    const app = element?.closest<HTMLElement>('.app');
+    if (!element || !app) return;
+    const measure = () =>
+      app.style.setProperty('--command-zone-height', `${element.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    measure();
+    return () => {
+      observer.disconnect();
+      app.style.removeProperty('--command-zone-height');
+    };
+  }, []);
   return (
-    <div className="command-zone">
+    <div ref={zone} className="command-zone">
+      {children}
       {notice && (
         <div className="command-notice glass" role="status">
           <p>{notice}</p>

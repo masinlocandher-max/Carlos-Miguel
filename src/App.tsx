@@ -181,31 +181,6 @@ export default function App() {
           <h1>Welcome, FMB.</h1>
         </div>
         <JewelCore state={state} />
-        <div className="core-caption">
-          <span className="core-name">JEWEL</span>
-          <p aria-live="polite">{statusCopy}</p>
-        </div>
-        <div className="quick-actions" aria-label="Quick actions">
-          <button
-            onClick={() => {
-              navigate(sections[0]);
-              setNotice(
-                'Your daily brief will be available after email, calendar, and task sources are connected.',
-              );
-            }}
-          >
-            <ArrowUpRight size={16} />
-            Brief me
-          </button>
-          <button onClick={() => navigate('Tasks & Approvals')}>
-            <ListChecks size={16} />
-            Review tasks
-          </button>
-          <button onClick={() => navigate('Files & Assets')}>
-            <Search size={16} />
-            Find a file
-          </button>
-        </div>
         {contextOpen && !focus && (
           <ContextPanel
             section={section}
@@ -233,7 +208,37 @@ export default function App() {
           busy={demo || running}
           notice={notice}
           clearNotice={() => setNotice('')}
-        />
+        >
+          {!notice && (
+            <>
+              <div className="core-caption">
+                <span className="core-name">JEWEL</span>
+                <p aria-live="polite">{statusCopy}</p>
+              </div>
+              <div className="quick-actions" aria-label="Quick actions">
+                <button
+                  onClick={() => {
+                    navigate(sections[0]);
+                    setNotice(
+                      'Your daily brief will be available after email, calendar, and task sources are connected.',
+                    );
+                  }}
+                >
+                  <ArrowUpRight size={16} />
+                  Brief me
+                </button>
+                <button onClick={() => navigate('Tasks & Approvals')}>
+                  <ListChecks size={16} />
+                  Review tasks
+                </button>
+                <button onClick={() => navigate('Files & Assets')}>
+                  <Search size={16} />
+                  Find a file
+                </button>
+              </div>
+            </>
+          )}
+        </CommandBar>
       </main>
       <footer className="statusbar">
         <span>
@@ -242,7 +247,7 @@ export default function App() {
         </span>
         <span>
           <AudioLines size={16} />
-          {demo ? 'Visual sequence playing' : 'Voice standby'}
+          {demo ? 'Visual sequence playing' : 'Voice not connected'}
         </span>
         <span>{demo || running ? stateLabel[state] : 'Awaiting command'}</span>
       </footer>

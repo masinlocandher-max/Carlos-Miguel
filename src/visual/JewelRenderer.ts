@@ -375,7 +375,7 @@ export async function createJewelRenderer(
     uniforms.motion.value = reduced ? 0 : 1;
     uniforms.audioAmplitude.value = audio;
     wireMaterial.opacity = 0.2 + current.speed * 0.18;
-    contourMaterial.opacity = (0.36 + current.speed * 0.1) * Math.sqrt(viewScale);
+    contourMaterial.opacity = (0.36 + current.speed * 0.24) * Math.sqrt(viewScale);
     if (!reduced) bands.rotation.z += dt * current.speed * 0.035;
     rings.forEach((ring, i) => {
       if (!reduced)
@@ -393,7 +393,7 @@ export async function createJewelRenderer(
     streamUniforms.time.value = elapsed;
     streamUniforms.activity.value = current.speed;
     scan.position.y = reduced ? 0 : Math.sin(phase * 0.8) * 0.78;
-    scanMaterial.opacity = reduced ? 0 : current.scan * 0.1 * Math.pow(Math.sin(elapsed * 0.7), 8);
+    scanMaterial.opacity = reduced ? 0 : current.scan * 0.24 * Math.pow(Math.sin(elapsed * 0.7), 8);
     const pulseAge = elapsed - pulseStart;
     const activePulse = pulseAge >= 0 && pulseAge < 2.2;
     const outward = activePulse ? pulseAge / 2.2 : 0;
@@ -510,13 +510,13 @@ function createCanvasFallback(
       const seed = values[i + 5];
       if (seed > current.density) continue;
       const light = values[i + 3] * (1 - current.eyes) + values[i + 4] * current.eyes;
-      ctx.globalAlpha = Math.pow(light, 1.4) * current.brightness * 0.8;
+      ctx.globalAlpha = Math.pow(light, 1.4) * current.brightness * 1.6;
       ctx.fillRect(cx + values[i] * scale, cy - values[i + 1] * scale, 1.25, 1.25);
     }
     ctx.strokeStyle = '#c8a15e';
     ctx.lineWidth = 0.65;
     for (let r = 0; r < 9; r++) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, current.rings - r)) * 0.35;
+      ctx.globalAlpha = Math.max(0, Math.min(1, current.rings - r)) * 0.55;
       ctx.beginPath();
       const start = media.matches ? 0 : elapsed * 0.015 * current.speed * (r % 2 ? -1 : 1);
       ctx.arc(cx, cy, (1.06 + r * 0.035) * scale, start, start + Math.PI * 1.84);

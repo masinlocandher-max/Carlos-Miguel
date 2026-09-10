@@ -1,7 +1,7 @@
 name: Jewel interface checks
 on:
   pull_request:
-    paths: ['src/**', 'public/jewel/**', 'package*.json', 'tsconfig.json', 'vite.config.ts', 'index.html', '.github/workflows/interface-check.yml']
+    paths: ['src/**', 'tests/**', 'public/jewel/**', 'package*.json', 'tsconfig.json', 'vite.config.ts', 'index.html', '.github/workflows/interface-check.yml']
 permissions:
   contents: read
 jobs:
@@ -16,3 +16,5 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
