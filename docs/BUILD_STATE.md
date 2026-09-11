@@ -26,7 +26,9 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 13b | Agent loop + planner | DONE | bounded by steps and wall clock |
 | 14 | Kernel (boot + wiring) | DONE | seal-first boot, registry frozen |
 | 15 | CLI | DONE | doctor/ask/approvals/audit/memory/tools/call |
-| 15b | HTTP API | NOT BUILT | CLI is the supported surface; deliberate |
+| 15b | Local control API | DONE | 11 tests, loopback + token, no new authority |
+| 19 | Codex command centre merged | DONE | visual shell from codex/jewel-command-center |
+| 20 | UI runtime bridge (src/lib/jewel.ts) | DONE | 7 tests, typed client |
 | 16 | Seal ceremony + CI enforcement | DONE | seal-cli, CI workflow, CODEOWNERS |
 | 17 | Acceptance-check suite (README) | DONE | all 11 checks executable, 123 tests total |
 | 18 | Documentation | DONE | README, ARCHITECTURE, SEAL |
@@ -36,6 +38,21 @@ INV-1 approval binding · INV-2 edit invalidates · INV-3 data-not-instruction �
 INV-4 audit before observable · INV-5 no duplicate effects · INV-6 failure is
 not success · INV-7 deny before provider call · INV-8 no secrets in logs ·
 INV-9 no fabrication · INV-10 refuse to boot unsealed
+
+## Codex handover
+
+Codex built the visual command centre and stopped at the runtime boundary. Its
+handoff said so directly: "No provider integration or live private data is
+implemented", and `src/lib/model.ts` calls `parseCommand` "a narrow local
+command router, not a model or a provider action executor".
+
+That unfinished job is now done:
+- `src/runtime/server.js` - the authenticated local control API
+- `src/lib/jewel.ts` - the typed client the shell uses to reach it
+
+Still open on the interface side (visual work, deliberately not this build's
+focus): wiring `src/App.tsx` and the panel components to `JewelClient` so the
+sections render live approvals, tasks and memory instead of placeholders.
 
 ## Honest limitations
 - The seal makes core modification detectable and unusable, not impossible.

@@ -46,8 +46,12 @@ jobs:
             node tools/seal-cli.mjs verify
           fi
 
-      - name: Run the test suite
+      - name: Run the runtime test suite
         run: npm test
+
+      # The UI tests need no install: they run on Node's type stripping.
+      - name: Run the interface test suite
+        run: npm run test:ui
 
       - name: Confirm no secrets are tracked
         run: |

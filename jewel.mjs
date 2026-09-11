@@ -239,9 +239,22 @@ async function callCmd(kernel, principal, rest) {
   if (['failed', 'denied', 'refused'].includes(result.status)) process.exitCode = 1;
 }
 
-function serve() {
-  err('The HTTP surface is not built yet. Use the CLI.');
-  process.exitCode = 1;
+async function serve(kernel) {
+  const { createApi } = await import('./src/runtime/server.js');
+  const api = createApi(kernel);
+  const { host, port } = await api.listen();
+
+  out(`Jewel control API on http://${host}:${port}`);
+  out(`  mode        ${kernel.config.mode}`);
+  out(`  seal        ${kernel.seal.ok ? (kernel.seal.signed ? 'signed' : 'unsigned') : 'BROKEN - lockdown'}`);
+  out(`  loopback only. Every route but /health needs the bearer token.`);
+  out('');
+  out('  Start the command centre with:  npm run dev');
+  out('  Stop with Ctrl-C.');
+
+  const shutdown = async () => { await api.close(); process.exit(0); };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main(process.argv.slice(2)).catch((e) => {

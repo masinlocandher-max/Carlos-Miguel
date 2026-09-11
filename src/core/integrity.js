@@ -65,6 +65,9 @@ export const SEALED_PATHS = Object.freeze([
   // Boot surface: config decides mode and authorized accounts; jewel.mjs wires
   // the kernel. Both can change behaviour without touching core/.
   'src/runtime/config.js',
+  // The control API. It grants no authority of its own, but it decides who
+  // may reach the executor at all.
+  'src/runtime/server.js',
   'jewel.mjs',
 ]);
 

@@ -15,6 +15,9 @@ No install step and no dependencies. Node 22 or newer.
 node jewel.mjs doctor          # health, seal, providers, what is waiting on you
 npm test                       # 123 tests, including every acceptance check
 npm run verify                 # verify the capability seal
+
+npm run serve                  # local control API for the command centre
+npm run dev                    # the command centre itself (needs npm ci first)
 ```
 
 ## Commands
@@ -133,10 +136,14 @@ memory, seal, agent loop, CLI, and 20 capabilities. 123 tests pass.
 provider credentials, listing authorized accounts, and switching to live mode.
 Until then Jewel runs in dry run, where nothing reaches the outside world.
 
-**Not built:** the HTTP/dashboard surface. The CLI is the supported interface.
-AGENTS.md describes a visual command center; that is a separate layer on top of
-this runtime, and this build was deliberately spent on capability rather than
-appearance.
+**The command centre.** Codex's visual shell is merged, and the runtime bridge
+it was missing is built: `jewel serve` exposes a loopback-only, token-guarded
+control API, and `src/lib/jewel.ts` is the typed client the shell uses to reach
+it. The API adds no authority — every call lands on the same policy, approval,
+idempotency and audit path as the CLI, so the interface cannot grant itself a
+capability. What remains there is presentation work: wiring `src/App.tsx` and
+the panels to `JewelClient` so each section renders live data instead of
+placeholders. That was left deliberately — this build was spent on capability.
 
 **Not verified by this build:** that any particular credential works, or that
 any provider account is connected. `jewel doctor` reports what is actually

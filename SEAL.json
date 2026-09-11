@@ -1,15 +1,15 @@
 {
   "version": 1,
   "algorithm": "sha256+hmac-sha256",
-  "sealedAt": "2026-09-11T08:44:41.574Z",
+  "sealedAt": "2026-09-11T08:56:06.976Z",
   "sealedBy": "FMB",
   "constitutionVersion": "1.0.0",
-  "root": "86fc0e47603a0e8bbafc2f62508b1ea6c672e8d89c4fa4e79bd9ce850ebc2f7c",
+  "root": "c0e7e1622f4ca3b4b602b12a7318abcfc3c33cf915f37658e4d1bee25a7a786e",
   "files": [
     {
       "path": "jewel.mjs",
-      "sha256": "0995332841ee29ddfa8495388970f41303e18d8d6c88b25600b35f8e2086fe5a",
-      "bytes": 10707
+      "sha256": "ae9f7b45f66633e0660c52b819a8d21f6d17d2b8b2e07c9de03cc24ea786f496",
+      "bytes": 11306
     },
     {
       "path": "src/adapters/http.js",
@@ -78,8 +78,8 @@
     },
     {
       "path": "src/core/integrity.js",
-      "sha256": "8f91c34561c6196ec96ea8229a40f1bf75872a9ed4814ee47a53c793793741e6",
-      "bytes": 8604
+      "sha256": "b0fc69d7a4a8b9dd47fe7d1746fba92687ef33bad674bafecd8044a8f948c651",
+      "bytes": 8743
     },
     {
       "path": "src/core/kernel.js",
@@ -127,12 +127,17 @@
       "bytes": 2861
     },
     {
+      "path": "src/runtime/server.js",
+      "sha256": "485d3daf6fd7752b14405b4f13119a8b286af54b0f5a2fe24003a0d7b02a5fc8",
+      "bytes": 10536
+    },
+    {
       "path": "src/tools/index.js",
       "sha256": "f954c8a3bce99473547add01ec3900974438ad107a75a211c249afe1fdd77803",
       "bytes": 14709
     }
   ],
   "signature": null,
-  "previousRoot": "7376de8fa33d1052338b248521384a41b3159c5cad6cdf1fe16291b9922fa24a",
-  "sealNumber": 7
+  "previousRoot": "c0e7e1622f4ca3b4b602b12a7318abcfc3c33cf915f37658e4d1bee25a7a786e",
+  "sealNumber": 10
 }
