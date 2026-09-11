@@ -1,0 +1,61 @@
+name: Jewel OS integrity and tests
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jewel-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify capability seal and run the suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The seal is the point of this repository. If the sealed core changed
+      # without an owner re-seal, the build fails here and the change cannot
+      # reach main quietly.
+      - name: Verify the capability seal
+        run: node tools/seal-cli.mjs verify
+
+      # When FMB's key is configured as a repository secret, CI also checks the
+      # owner signature. Without it the step reports unsigned rather than
+      # failing, so forks and outside contributors still get a useful run.
+      - name: Verify the owner signature
+        env:
+          JEWEL_SEAL_KEY: ${{ secrets.JEWEL_SEAL_KEY }}
+        run: |
+          if [ -z "${JEWEL_SEAL_KEY}" ]; then
+            echo "::warning::JEWEL_SEAL_KEY is not configured. The owner signature was not verified."
+            node tools/seal-cli.mjs verify
+          else
+            node tools/seal-cli.mjs verify
+          fi
+
+      - name: Run the test suite
+        run: npm test
+
+      - name: Confirm no secrets are tracked
+        run: |
+          if git ls-files | grep -E '^\.env$|^\.jewel/' ; then
+            echo "::error::Secrets or runtime data are tracked in git."
+            exit 1
+          fi
+          echo "No secrets or runtime data tracked."
+
+      - name: Report the capability surface
+        run: node jewel.mjs tools

@@ -1,0 +1,19 @@
+{
+  "name": "jewel-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jewel OS - FMB's sealed executive-assistant agent runtime.",
+  "type": "module",
+  "engines": { "node": ">=22.0.0" },
+  "bin": { "jewel": "./jewel.mjs" },
+  "scripts": {
+    "jewel": "node jewel.mjs",
+    "test": "node --test \"test/**/*.test.js\"",
+    "seal": "node tools/seal-cli.mjs seal",
+    "verify": "node tools/seal-cli.mjs verify",
+    "serve": "node jewel.mjs serve",
+    "doctor": "node jewel.mjs doctor"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
