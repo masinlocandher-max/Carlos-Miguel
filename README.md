@@ -152,14 +152,25 @@ memory, seal, agent loop, CLI, control API, and 21 capabilities. 147 tests pass.
 provider credentials, listing authorized accounts, and switching to live mode.
 Until then Jewel runs in dry run, where nothing reaches the outside world.
 
-**The command centre.** Codex's visual shell is merged, and the runtime bridge
-it was missing is built: `jewel serve` exposes a loopback-only, token-guarded
-control API, and `src/lib/jewel.ts` is the typed client the shell uses to reach
-it. The API adds no authority — every call lands on the same policy, approval,
+**The command centre works.** Codex's visual shell is merged and connected.
+`jewel serve` exposes a loopback-only, token-guarded control API; the shell
+reads live approvals, tasks, memory and seal state through it, and you can
+approve or deny from the panel. Typing a real request sends it to Jewel;
+typing `focus mode` or `open projects` stays local and instant.
+
+The API adds no authority — every call lands on the same policy, approval,
 idempotency and audit path as the CLI, so the interface cannot grant itself a
-capability. What remains there is presentation work: wiring `src/App.tsx` and
-the panels to `JewelClient` so each section renders live data instead of
-placeholders. That was left deliberately — this build was spent on capability.
+capability.
+
+Still placeholder: Projects, Files & Assets and GitHub have no live feed wired
+yet. They say so rather than showing an empty panel that implies data. Voice
+input is not implemented.
+
+```bash
+npm ci && npm run build       # once
+node jewel.mjs serve          # terminal 1 — the runtime
+npm run dev                   # terminal 2 — the command centre
+```
 
 **Not verified by this build:** that any particular credential works, or that
 any provider account is connected. `jewel doctor` reports what is actually

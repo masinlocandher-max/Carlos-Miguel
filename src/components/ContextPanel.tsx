@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import type { Section, JewelState } from '../lib/model';
 import { sections, stateLabel } from '../lib/model';
+import type { Runtime } from '../lib/useJewel.ts';
+import { RuntimeStrip, ApprovalsPanel, TasksPanel, MemoryPanel, NotWired } from './LivePanels.tsx';
 const integrations = [
   { label: 'Email', Icon: Mail },
   { label: 'Calendar', Icon: Calendar },
@@ -68,6 +70,25 @@ const emptyContent: Partial<
     source: 'Approval service · Not configured',
   },
 };
+/** Report what is actually connected, rather than a blanket "not connected". */
+function providerStatus(tool: string, runtime: Runtime): string {
+  const providers = runtime.status?.providers;
+  if (!providers) return `${tool} status is unavailable while the runtime is unreachable.`;
+  const map: Record<string, boolean | undefined> = {
+    Email: providers.google,
+    Calendar: providers.google,
+    Notion: providers.notion,
+    'Google Drive': providers.google,
+    GitHub: providers.github,
+    OpenAI: undefined,
+  };
+  const connected = map[tool];
+  if (connected === undefined) return `${tool} connection is reported by \`jewel doctor\`, not here.`;
+  return connected
+    ? `${tool} is connected. Jewel can read it; acting still needs your approval.`
+    : `${tool} is not connected. Jewel will say so rather than guess.`;
+}
+
 function Clock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -101,6 +122,7 @@ export function ContextPanel({
   onStop,
   onHide,
   activity,
+  runtime,
 }: {
   section: Section;
   state: JewelState;
@@ -110,6 +132,7 @@ export function ContextPanel({
   onStop: () => void;
   onHide: () => void;
   activity: string;
+  runtime: Runtime;
 }) {
   const [tool, setTool] = useState<string | null>(null);
   const empty = emptyContent[section];
@@ -132,21 +155,17 @@ export function ContextPanel({
               </p>
             </div>
           </section>
-          <section className="glass panel">
-            <div className="panel-heading">
-              <span>
-                <ShieldCheck size={16} /> Approvals
-              </span>
-              <button
-                className="icon-button"
-                onClick={() => onNavigate('Approval Queue')}
-                aria-label="Open approval queue"
-              >
-                <ArrowUpRight size={17} />
-              </button>
-            </div>
-            <p className="empty-line">No items loaded</p>
-          </section>
+          <RuntimeStrip runtime={runtime} />
+          <div className="live-approvals">
+            <ApprovalsPanel runtime={runtime} compact />
+            <button
+              className="text-button"
+              onClick={() => onNavigate('Approval Queue')}
+              aria-label="Open approval queue"
+            >
+              Open approval queue <ArrowUpRight size={16} />
+            </button>
+          </div>
           <section className="glass panel">
             <div className="panel-heading">
               <span>Tools</span>
@@ -166,7 +185,7 @@ export function ContextPanel({
             </div>
             {tool && (
               <p className="tool-detail" role="status">
-                {tool} is not connected to this interface.
+                {providerStatus(tool, runtime)}
               </p>
             )}
           </section>
@@ -216,12 +235,19 @@ export function ContextPanel({
             <strong>Not configured</strong>
           </div>
         </section>
+      ) : section === 'Approval Queue' ? (
+        <ApprovalsPanel runtime={runtime} />
+      ) : section === 'Tasks & Approvals' ? (
+        <TasksPanel runtime={runtime} />
+      ) : section === 'Memory Vault' ? (
+        <MemoryPanel runtime={runtime} />
       ) : empty ? (
         <section className="glass panel section-empty">
           <empty.Icon className="empty-icon" />
           <h2>{empty.title}</h2>
           <p className="supporting">{empty.copy}</p>
           <div className="source-note">{empty.source}</div>
+          <NotWired connection={runtime.connection} />
           <button className="text-button" onClick={() => onNavigate(sections[0])}>
             Back to command center <ArrowUpRight size={16} />
           </button>

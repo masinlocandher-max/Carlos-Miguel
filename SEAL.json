@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256+hmac-sha256",
-  "sealedAt": "2026-09-11T08:59:44.730Z",
+  "sealedAt": "2026-09-11T09:05:18.401Z",
   "sealedBy": "FMB",
   "constitutionVersion": "1.0.0",
   "root": "ee532d9bb9c341509352fa1e1a430f5fc9dbbcb7ed8b134433e61bf386246583",
@@ -139,5 +139,5 @@
   ],
   "signature": null,
   "previousRoot": "ee532d9bb9c341509352fa1e1a430f5fc9dbbcb7ed8b134433e61bf386246583",
-  "sealNumber": 12
+  "sealNumber": 13
 }

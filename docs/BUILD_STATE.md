@@ -30,6 +30,7 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 19 | Codex command centre merged | DONE | visual shell from codex/jewel-command-center |
 | 20 | UI runtime bridge (src/lib/jewel.ts) | DONE | 7 tests, typed client |
 | 21 | First-run setup (`jewel init`) + env loading | DONE | 13 tests, one command to usable |
+| 22 | Command centre wired to live data | DONE | approvals, tasks, memory, seal/runtime strip |
 | 16 | Seal ceremony + CI enforcement | DONE | seal-cli, CI workflow, CODEOWNERS |
 | 17 | Acceptance-check suite (README) | DONE | all 11 checks executable, 123 tests total |
 | 18 | Documentation | DONE | README, ARCHITECTURE, SEAL |
@@ -51,9 +52,14 @@ That unfinished job is now done:
 - `src/runtime/server.js` - the authenticated local control API
 - `src/lib/jewel.ts` - the typed client the shell uses to reach it
 
-Still open on the interface side (visual work, deliberately not this build's
-focus): wiring `src/App.tsx` and the panel components to `JewelClient` so the
-sections render live approvals, tasks and memory instead of placeholders.
+That is now done too. `src/App.tsx` routes real requests to Jewel through the
+control API, and the panels render live approvals (with approve/deny), tasks,
+memory with citability, and a runtime strip showing seal and audit state.
+Local chrome commands (`focus mode`, `open projects`) stay instant and offline.
+
+Still open on the interface side: Projects, Files & Assets and GitHub sections
+have no live feed wired yet (they report that honestly rather than showing a
+placeholder that implies data). Voice input is still not implemented.
 
 ## Honest limitations
 - The seal makes core modification detectable and unusable, not impossible.

@@ -15,6 +15,8 @@ import { ContextPanel } from './components/ContextPanel';
 import { CommandBar } from './components/CommandBar';
 import { parseCommand, sections, stateLabel } from './lib/model';
 import type { Section, JewelState } from './lib/model';
+import { useJewel } from './lib/useJewel.ts';
+import { routeCommand, describeTurn, describeError, actionLine } from './lib/runtime.ts';
 export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [focus, setFocus] = useState(false);
@@ -26,7 +28,9 @@ export default function App() {
   const [activity, setActivity] = useState('');
   const [demo, setDemo] = useState(false);
   const [running, setRunning] = useState(false);
+  const [answer, setAnswer] = useState('');
   const timers = useRef<number[]>([]);
+  const runtime = useJewel();
   const menuButton = useRef<HTMLButtonElement>(null);
   const stopDemo = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -42,6 +46,7 @@ export default function App() {
         stopDemo();
         setFocus(false);
         setNotice('');
+        setAnswer('');
       }
     };
     document.addEventListener('keydown', keydown);
@@ -80,32 +85,64 @@ export default function App() {
       ),
     );
   };
+  /**
+   * Local chrome commands (navigate, focus) stay instant and offline.
+   * Everything else is real work and goes to Jewel through the control API,
+   * where policy, approval binding, idempotency and audit all apply.
+   */
   const submit = () => {
-    if (!command.trim() || demo || running) return;
+    if (demo || running) return;
     const intent = parseCommand(command);
+    const route = routeCommand(command, intent.type !== 'unsupported', runtime.connection);
+
+    if (route.kind === 'blocked') {
+      setNotice(route.reason);
+      return;
+    }
+
     stopDemo();
-    setRunning(true);
-    setState('thinking');
     setCommand('');
     setNotice('');
-    timers.current.push(
-      window.setTimeout(() => {
-        if (intent.type === 'unsupported') {
-          setNotice(
-            'This is the interface preview. Try “open projects”, “open files”, or “focus mode”. AI responses and connected actions are not available yet.',
+    setAnswer('');
+
+    if (route.kind === 'local') {
+      setRunning(true);
+      setState('executing');
+      if (intent.type === 'navigate') navigate(intent.section);
+      else if (intent.type === 'focus') {
+        setFocus(intent.enabled);
+        setNavOpen(false);
+        setActivity(intent.enabled ? 'Entered Focus Mode' : 'Exited Focus Mode');
+      }
+      timers.current.push(
+        window.setTimeout(() => {
+          setState('complete');
+          timers.current.push(
+            window.setTimeout(() => {
+              setState('idle');
+              setRunning(false);
+            }, 1200),
           );
-          setState('idle');
-          setRunning(false);
-          return;
-        }
+        }, 500),
+      );
+      return;
+    }
+
+    setRunning(true);
+    setState('thinking');
+
+    void (async () => {
+      try {
+        const turn = await runtime.ask(route.request);
+        const described = describeTurn(turn);
+
         setState('executing');
-        // This state is tied to a real local UI operation, never an external action.
-        if (intent.type === 'navigate') navigate(intent.section);
-        else {
-          setFocus(intent.enabled);
-          setNavOpen(false);
-          setActivity(intent.enabled ? 'Entered Focus Mode' : 'Exited Focus Mode');
-        }
+        setAnswer(described.answer);
+        setNotice(described.notice);
+        setActivity(
+          turn.actions.length ? turn.actions.map(actionLine).join(' · ') : `Answered · ${turn.steps} step(s)`,
+        );
+
         timers.current.push(
           window.setTimeout(() => {
             setState('complete');
@@ -115,18 +152,28 @@ export default function App() {
                 setRunning(false);
               }, 1800),
             );
-          }, 1000),
+          }, 600),
         );
-      }, 1400),
-    );
+      } catch (err) {
+        // A failure must never look like a quiet success.
+        setState('idle');
+        setRunning(false);
+        setAnswer('');
+        setNotice(describeError(err));
+        setActivity('Request failed');
+      }
+    })();
   };
+
   const statusCopy = demo
     ? `${stateLabel[state]} · Visual preview`
     : running
-      ? `${stateLabel[state]} · Local command`
+      ? `${stateLabel[state]} · ${runtime.connection.label}`
       : state === 'listening'
         ? 'Receiving your text.'
-        : 'Ready when you are.';
+        : runtime.connection.operational
+          ? `Ready when you are. · ${runtime.connection.label}`
+          : runtime.connection.label;
   return (
     <div
       className={`app ${focus ? 'focus-mode' : ''} ${contextOpen ? '' : 'context-hidden'}`}
@@ -191,6 +238,7 @@ export default function App() {
             onStop={stopDemo}
             onHide={() => setContextOpen(false)}
             activity={activity}
+          runtime={runtime}
           />
         )}
         <CommandBar
@@ -209,7 +257,19 @@ export default function App() {
           notice={notice}
           clearNotice={() => setNotice('')}
         >
-          {!notice && (
+          {answer && (
+            <div className="jewel-answer" role="status" aria-live="polite">
+              <p>{answer}</p>
+              <button
+                className="text-button"
+                onClick={() => setAnswer('')}
+                aria-label="Dismiss Jewel's answer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          {!notice && !answer && (
             <>
               <div className="core-caption">
                 <span className="core-name">JEWEL</span>
@@ -219,9 +279,11 @@ export default function App() {
                 <button
                   onClick={() => {
                     navigate(sections[0]);
-                    setNotice(
-                      'Your daily brief will be available after email, calendar, and task sources are connected.',
-                    );
+                    if (runtime.connection.operational) {
+                      setCommand('Brief me on what needs my attention today.');
+                    } else {
+                      setNotice(runtime.connection.detail);
+                    }
                   }}
                 >
                   <ArrowUpRight size={16} />
