@@ -20,7 +20,7 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { boot } from './src/core/kernel.js';
-import { loadConfig, configReport } from './src/runtime/config.js';
+import { loadConfig, configReport, loadEnvFiles } from './src/runtime/config.js';
 import { builtinTools, TaskStore } from './src/tools/index.js';
 import { createModel } from './src/adapters/model.js';
 import { createWorkspace } from './src/adapters/workspace.js';
@@ -33,6 +33,12 @@ const err = (...a) => process.stderr.write(`${a.join(' ')}\n`);
 
 async function main(argv) {
   const [command = 'doctor', ...rest] = argv;
+
+  // `init` runs before any kernel exists - there may be nothing to boot yet.
+  if (command === 'init') return init(rest);
+
+  // Read .env.local / .env. Anything already exported wins over the file.
+  loadEnvFiles(ROOT);
   const config = loadConfig();
 
   const kernel = await boot({
@@ -61,6 +67,7 @@ async function main(argv) {
     case 'tools': return toolsCmd(kernel);
     case 'call': return callCmd(kernel, principal, rest);
     case 'serve': return serve(kernel);
+    case 'setup': return init(rest);
     case 'help': case '--help': case '-h': return help();
     default:
       err(`Unknown command: ${command}`);
@@ -72,6 +79,7 @@ async function main(argv) {
 function help() {
   out(`Jewel OS
 
+  jewel init                   first-run setup: keys, config, seal
   jewel doctor                 health, seal, providers, pending work
   jewel ask "<request>"        one full agent turn
   jewel approvals              what is waiting on you
@@ -82,7 +90,58 @@ function help() {
   jewel memory <query>         search memory with provenance
   jewel tools                  the sealed capability surface
   jewel call <tool> '<json>'   invoke one capability directly
+  jewel serve                  start the local control API
 `);
+}
+
+async function init(rest) {
+  const { initialize } = await import('./src/runtime/setup.js');
+  const force = rest.includes('--force');
+
+  let result;
+  try {
+    result = initialize(ROOT, { force });
+  } catch (e) {
+    err(`Setup stopped: ${e.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!result.created) {
+    for (const w of result.warnings) out(w);
+    out('');
+    out('Nothing was changed. Run `jewel doctor` to see what is still missing.');
+    process.exitCode = 1;
+    return;
+  }
+
+  for (const w of result.warnings) out(`  ! ${w}`);
+
+  out('');
+  out('Jewel is set up.');
+  out('');
+  out(`  wrote       .env.local  (gitignored, mode 600)`);
+  if (result.sealed) {
+    out(`  sealed      ${result.sealed.files} core files, seal #${result.sealed.sealNumber}${result.sealed.signed ? ', owner-signed' : ''}`);
+  }
+  out('');
+  out('  ┌─ SAVE THIS NOW ────────────────────────────────────────────────┐');
+  out('  │ Your seal key. Copy it into your password manager.             │');
+  out('  │ Lose it and you cannot re-seal the core.                       │');
+  out('  └────────────────────────────────────────────────────────────────┘');
+  out('');
+  out(`  JEWEL_SEAL_KEY=${result.sealKey}`);
+  out('');
+  out('  It is also in .env.local. Never commit that file, never paste it into');
+  out('  chat, never put it in Notion.');
+  out('');
+  out('Next:');
+  out('  1. Add a model key to .env.local (ANTHROPIC_API_KEY or OPENAI_API_KEY)');
+  out('  2. Set JEWEL_ACCOUNTS to the accounts Jewel may act as');
+  out('  3. node jewel.mjs doctor');
+  out('');
+  out('Jewel starts in dry run. Nothing reaches the outside world until you');
+  out('set JEWEL_EXECUTION_MODE=live yourself.');
 }
 
 function doctor(kernel, config) {

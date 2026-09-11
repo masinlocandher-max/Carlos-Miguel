@@ -6,9 +6,67 @@
  * registered with the redactor the moment it is read, so it cannot appear in a
  * log, an audit record or an error payload from that point on.
  */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { registerSecret } from '../core/redact.js';
 import { MODE } from '../core/policy.js';
 import { SENSITIVITY } from '../core/memory.js';
+
+/**
+ * Minimal .env loader. Zero dependency, and deliberately conservative:
+ *
+ *   - a variable already present in the real environment ALWAYS wins, so a
+ *     stale file can never silently override what an operator exported;
+ *   - values are read literally. No shell expansion, no command substitution,
+ *     no `${VAR}` interpolation - an env file must not be able to execute
+ *     anything or reach another variable;
+ *   - only `.local` files are read, and those are gitignored, so the loader
+ *     cannot pick up something that was committed by accident.
+ *
+ * @param {string} path
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {number} how many variables were applied
+ */
+export function loadEnvFile(path, env = process.env) {
+  if (!existsSync(path)) return 0;
+  let applied = 0;
+  for (const rawLine of readFileSync(path, 'utf8').split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+
+    const key = line.slice(0, eq).trim().replace(/^export\s+/, '');
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (key in env) continue;               // the real environment wins
+
+    let value = line.slice(eq + 1).trim();
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value.endsWith(quote) && value.length >= 2) {
+      value = value.slice(1, -1);
+    } else {
+      const hash = value.indexOf(' #');     // strip trailing comments on bare values
+      if (hash !== -1) value = value.slice(0, hash).trim();
+    }
+
+    // A placeholder is not a value. Treat it as absent so `doctor` reports the
+    // gap honestly instead of Jewel trying to authenticate with the word
+    // "your_openai_key_here".
+    if (/^your_.*_here$/.test(value) || value === '') continue;
+
+    env[key] = value;
+    applied += 1;
+  }
+  return applied;
+}
+
+/** Load the operator's env files, nearest-first. Real environment still wins. */
+export function loadEnvFiles(root, env = process.env) {
+  let applied = 0;
+  for (const name of ['.env.local', '.env']) applied += loadEnvFile(join(root, name), env);
+  return applied;
+}
 
 const SECRET_KEYS = [
   'JEWEL_SEAL_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NOTION_API_KEY',

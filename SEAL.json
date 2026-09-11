@@ -1,15 +1,15 @@
 {
   "version": 1,
   "algorithm": "sha256+hmac-sha256",
-  "sealedAt": "2026-09-11T08:56:06.976Z",
+  "sealedAt": "2026-09-11T08:59:44.730Z",
   "sealedBy": "FMB",
   "constitutionVersion": "1.0.0",
-  "root": "c0e7e1622f4ca3b4b602b12a7318abcfc3c33cf915f37658e4d1bee25a7a786e",
+  "root": "ee532d9bb9c341509352fa1e1a430f5fc9dbbcb7ed8b134433e61bf386246583",
   "files": [
     {
       "path": "jewel.mjs",
-      "sha256": "ae9f7b45f66633e0660c52b819a8d21f6d17d2b8b2e07c9de03cc24ea786f496",
-      "bytes": 11306
+      "sha256": "e18202670b7b2364cbc4e7cec47ad81b5969212d7fbfaca9893d72e014b2e215",
+      "bytes": 13659
     },
     {
       "path": "src/adapters/http.js",
@@ -123,8 +123,8 @@
     },
     {
       "path": "src/runtime/config.js",
-      "sha256": "9dc24e3d1658d35391afb6a8818ac679ad661759b727234d13b2aee06fe6ef98",
-      "bytes": 2861
+      "sha256": "5182f15cdd087fc013c25aaaa085f3c2c41a6c58afec09a6eefa44894243d681",
+      "bytes": 5095
     },
     {
       "path": "src/runtime/server.js",
@@ -138,6 +138,6 @@
     }
   ],
   "signature": null,
-  "previousRoot": "c0e7e1622f4ca3b4b602b12a7318abcfc3c33cf915f37658e4d1bee25a7a786e",
-  "sealNumber": 10
+  "previousRoot": "ee532d9bb9c341509352fa1e1a430f5fc9dbbcb7ed8b134433e61bf386246583",
+  "sealNumber": 12
 }

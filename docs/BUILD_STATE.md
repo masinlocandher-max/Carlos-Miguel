@@ -29,6 +29,7 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 15b | Local control API | DONE | 11 tests, loopback + token, no new authority |
 | 19 | Codex command centre merged | DONE | visual shell from codex/jewel-command-center |
 | 20 | UI runtime bridge (src/lib/jewel.ts) | DONE | 7 tests, typed client |
+| 21 | First-run setup (`jewel init`) + env loading | DONE | 13 tests, one command to usable |
 | 16 | Seal ceremony + CI enforcement | DONE | seal-cli, CI workflow, CODEOWNERS |
 | 17 | Acceptance-check suite (README) | DONE | all 11 checks executable, 123 tests total |
 | 18 | Documentation | DONE | README, ARCHITECTURE, SEAL |

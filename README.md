@@ -9,11 +9,24 @@ Carlos Miguel is the legacy repository name. Jewel is the active identity.
 
 ## Quick start
 
-No install step and no dependencies. Node 22 or newer.
+No install step and no dependencies for the runtime. Node 22 or newer.
 
 ```bash
+node jewel.mjs init            # generates your keys, writes .env.local, seals the core
 node jewel.mjs doctor          # health, seal, providers, what is waiting on you
-npm test                       # 123 tests, including every acceptance check
+```
+
+`init` prints your seal key **once**. Copy it into your password manager before
+you do anything else — without it you cannot re-seal the core. It also writes
+`.env.local` (gitignored, mode 600) with everything else already filled in.
+Add a model key and your authorized accounts to that file and run `doctor`
+again; it lists exactly what is still missing.
+
+Jewel starts in **dry run**. Nothing reaches the outside world until you set
+`JEWEL_EXECUTION_MODE=live` yourself.
+
+```bash
+npm test                       # 147 tests, including every acceptance check
 npm run verify                 # verify the capability seal
 
 npm run serve                  # local control API for the command centre
@@ -23,6 +36,7 @@ npm run dev                    # the command centre itself (needs npm ci first)
 ## Commands
 
 ```
+jewel init                   first-run setup: keys, config, seal
 jewel doctor                 health, seal, providers, pending work
 jewel ask "<request>"        one full agent turn
 jewel approvals              what is waiting on you
@@ -33,6 +47,7 @@ jewel audit [traceId]        verify the chain, or print one receipt
 jewel memory <query>         search memory with provenance
 jewel tools                  the sealed capability surface
 jewel call <tool> '<json>'   invoke one capability directly
+jewel serve                  start the local control API
 ```
 
 ## What makes this safe to give real access
@@ -130,7 +145,8 @@ no network. Run `npm test`.
 ## Current state, stated plainly
 
 **Working:** the full enforcement path — policy, approvals, idempotency, audit,
-memory, seal, agent loop, CLI, and 20 capabilities. 123 tests pass.
+memory, seal, agent loop, CLI, control API, and 21 capabilities. 147 tests pass.
+`jewel init` takes a fresh clone to an owner-signed core in one command.
 
 **Requires your action before real use:** sealing with your own key, adding
 provider credentials, listing authorized accounts, and switching to live mode.
