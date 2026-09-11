@@ -179,6 +179,7 @@ access.
 
 ## Documentation
 
+- [docs/QUICKSTART.md](docs/QUICKSTART.md) — setup, the approval loop, and what to do when something is wrong
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, the ten invariants, why each choice was made
 - [docs/SEAL.md](docs/SEAL.md) — the seal ceremony and its honest limits
 - [docs/BUILD_STATE.md](docs/BUILD_STATE.md) — build progress and what remains
