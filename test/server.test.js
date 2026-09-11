@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { boot } from '../src/core/kernel.js';
-import { createSeal } from '../src/core/integrity.js';
+import { createSeal, generateSealKeypair } from '../src/core/integrity.js';
 import { createApi } from '../src/runtime/server.js';
 import { builtinTools, TaskStore } from '../src/tools/index.js';
 import { loadConfig } from '../src/runtime/config.js';
@@ -16,11 +16,11 @@ import { fixedClock } from '../src/core/clock.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TOKEN = 'test-api-token-0123456789';
-const SEAL_KEY = 'server-test-owner-key';
+const TEST_OWNER = generateSealKeypair();
 
 const SIGNED_SEAL = (() => {
   const p = join(mkdtempSync(join(tmpdir(), 'jewel-srv-seal-')), 'SEAL.json');
-  writeFileSync(p, JSON.stringify(createSeal(ROOT, { key: SEAL_KEY }), null, 2));
+  writeFileSync(p, JSON.stringify(createSeal(ROOT, { privateKey: TEST_OWNER.privateKey }), null, 2));
   return p;
 })();
 
@@ -39,13 +39,18 @@ function workspace() {
   };
 }
 
-async function harness() {
+/**
+ * Every server test registers its close with `t.after`, so a failed assertion
+ * cannot leave a listening socket behind and hang the whole run. Relying on a
+ * trailing `await api.close()` only works when nothing throws.
+ */
+async function harness(t) {
   const ws = workspace();
   const kernel = await boot({
     root: ROOT,
     config: {
       ...loadConfig({}), dataDir: mkdtempSync(join(tmpdir(), 'jewel-srv-')),
-      mode: MODE.LIVE, sealKey: SEAL_KEY, sealPath: SIGNED_SEAL, owner: 'FMB',
+      mode: MODE.LIVE, sealPublicKey: TEST_OWNER.publicKey, sealPath: SIGNED_SEAL, owner: 'FMB',
       accounts: ['fmb@example.com'], scopes: ['email', 'notion', 'calendar', 'drive', 'github'],
       clearance: SENSITIVITY.RESTRICTED,
     },
@@ -58,6 +63,7 @@ async function harness() {
 
   const api = createApi(kernel, { token: TOKEN, port: 0 });
   const { port } = await api.listen();
+  if (t && typeof t.after === 'function') t.after(() => api.close());
   const base = `http://127.0.0.1:${port}`;
 
   const call = (path, init = {}) => fetch(`${base}${path}`, {
@@ -68,49 +74,46 @@ async function harness() {
   return { kernel, api, base, call, ws };
 }
 
-test('refuses to start without a token rather than running open', async () => {
-  const { kernel, api } = await harness();
+test('refuses to start without a token rather than running open', async (t) => {
+  const { kernel, api } = await harness(t);
   assert.throws(() => createApi(kernel, { token: null, port: 0 }), (e) => e.code === 'INVALID_INPUT');
-  await api.close();
 });
 
-test('every route but /health requires a valid bearer token', async () => {
-  const { api, base, call } = await harness();
+test('every route but /health requires a valid bearer token', async (t) => {
+  const { api, base, call } = await harness(t);
 
   assert.equal((await fetch(`${base}/health`)).status, 200);
   assert.equal((await fetch(`${base}/status`)).status, 401);
   assert.equal((await fetch(`${base}/status`, { headers: { authorization: 'Bearer wrong-token' } })).status, 401);
   assert.equal((await call('/status')).status, 200);
 
-  await api.close();
 });
 
-test('/health reveals liveness only, no private state', async () => {
-  const { api, base } = await harness();
+test('/health reveals liveness only, no private state', async (t) => {
+  const { api, base } = await harness(t);
   const body = await (await fetch(`${base}/health`)).json();
-  assert.deepEqual(Object.keys(body).sort(), ['lockdown', 'ok', 'sealed', 'signed']);
-  await api.close();
+  assert.deepEqual(Object.keys(body).sort(), ['lockdown', 'ok', 'pinned', 'sealed', 'signed', 'trust']);
 });
 
-test('a foreign origin is rejected', async () => {
-  const { api, call } = await harness();
+test('a foreign origin is rejected', async (t) => {
+  const { api, call } = await harness(t);
   const res = await call('/status', { headers: { origin: 'https://evil.example.com' } });
   assert.equal(res.status, 401);
-  await api.close();
 });
 
-test('/status reports seal, audit and provider state honestly', async () => {
-  const { api, call } = await harness();
+test('/status reports seal, audit and provider state honestly', async (t) => {
+  const { api, call } = await harness(t);
   const s = await (await call('/status')).json();
   assert.equal(s.seal.signed, true);
+  assert.equal(s.seal.pinned, true);
+  assert.equal(s.seal.trust, 'pinned');
   assert.equal(s.audit.intact, true);
   assert.ok(s.capabilities >= 20);
   assert.equal(s.providers.notion, true);
-  await api.close();
 });
 
-test('the API cannot bypass the approval gate', async () => {
-  const { api, call, ws } = await harness();
+test('the API cannot bypass the approval gate', async (t) => {
+  const { api, call, ws } = await harness(t);
   const payload = { from: 'fmb@example.com', draftId: 'd1', to: ['c@example.com'], subject: 'Hi', bodyHash: 'abc12345' };
 
   const res = await call('/call', { method: 'POST', body: JSON.stringify({ tool: 'email.send', args: payload }) });
@@ -126,11 +129,10 @@ test('the API cannot bypass the approval gate', async () => {
   assert.equal(second.status, 'succeeded');
   assert.equal(ws.effects.sends.length, 1);
 
-  await api.close();
 });
 
-test('editing a payload after an API grant still invalidates it', async () => {
-  const { api, call, ws } = await harness();
+test('editing a payload after an API grant still invalidates it', async (t) => {
+  const { api, call, ws } = await harness(t);
   const payload = { from: 'fmb@example.com', draftId: 'd1', to: ['c@example.com'], subject: 'Hi', bodyHash: 'abc12345' };
   const first = await (await call('/call', { method: 'POST', body: JSON.stringify({ tool: 'email.send', args: payload }) })).json();
   await call('/approvals/grant', { method: 'POST', body: JSON.stringify({ ref: first.approval.ref }) });
@@ -139,11 +141,10 @@ test('editing a payload after an API grant still invalidates it', async () => {
   const out = await (await call('/call', { method: 'POST', body: JSON.stringify({ tool: 'email.send', args: edited }) })).json();
   assert.equal(out.status, 'pending_approval');
   assert.equal(ws.effects.sends.length, 0);
-  await api.close();
 });
 
-test('approval listings never expose the full payload', async () => {
-  const { api, call } = await harness();
+test('approval listings never expose the full payload', async (t) => {
+  const { api, call } = await harness(t);
   await call('/call', { method: 'POST', body: JSON.stringify({
     tool: 'email.send',
     args: { from: 'fmb@example.com', draftId: 'd1', to: ['c@example.com'], subject: 'Secret subject', bodyHash: 'abc12345' },
@@ -152,29 +153,25 @@ test('approval listings never expose the full payload', async () => {
   assert.equal(approvals.length, 1);
   assert.equal(approvals[0].payload, undefined, 'the list must not leak the payload');
   assert.ok(approvals[0].binding);
-  await api.close();
 });
 
-test('/ask runs a full turn and returns a trace', async () => {
-  const { api, call } = await harness();
+test('/ask runs a full turn and returns a trace', async (t) => {
+  const { api, call } = await harness(t);
   const out = await (await call('/ask', { method: 'POST', body: JSON.stringify({ request: 'what is on today' }) })).json();
   assert.match(out.answer, /Understood/);
   assert.ok(out.trace.startsWith('cor_'));
-  await api.close();
 });
 
-test('typed errors map to correct status codes', async () => {
-  const { api, call } = await harness();
+test('typed errors map to correct status codes', async (t) => {
+  const { api, call } = await harness(t);
   assert.equal((await call('/call', { method: 'POST', body: JSON.stringify({ tool: 'no.such' }) })).status, 200); // executor returns a failed result, not an HTTP error
   assert.equal((await call('/ask', { method: 'POST', body: JSON.stringify({}) })).status, 400);
   assert.equal((await call('/nope')).status, 404);
   assert.equal((await call('/call', { method: 'POST', body: '{not json' })).status, 400);
-  await api.close();
 });
 
-test('an oversized body is rejected', async () => {
-  const { api, call } = await harness();
+test('an oversized body is rejected', async (t) => {
+  const { api, call } = await harness(t);
   const res = await call('/ask', { method: 'POST', body: JSON.stringify({ request: 'x'.repeat(300_000) }) });
   assert.equal(res.status, 400);
-  await api.close();
 });

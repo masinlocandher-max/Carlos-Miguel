@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 import { boot } from '../src/core/kernel.js';
-import { createSeal } from '../src/core/integrity.js';
+import { createSeal, generateSealKeypair } from '../src/core/integrity.js';
 import { builtinTools, TaskStore } from '../src/tools/index.js';
 import { loadConfig } from '../src/runtime/config.js';
 import { EchoModel } from '../src/adapters/model.js';
@@ -26,17 +26,18 @@ import { fixedClock } from '../src/core/clock.js';
 import { MODE } from '../src/core/policy.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SEAL_KEY = 'acceptance-test-owner-key';
-
 /**
- * Sign the CURRENT core with a test key, into a temp file. The seal is still
- * verified in full - every file hash and the signature - so these tests fail
- * the moment a sealed file changes without a re-seal.
+ * Sign the CURRENT core with a throwaway owner keypair, into a temp file, and
+ * pin that keypair's public half. The seal is still verified in full - every
+ * file hash, the signature, and the anchor - so these tests fail the moment a
+ * sealed file changes without a re-seal.
  */
+const TEST_OWNER = generateSealKeypair();
+const SEAL_KEY = TEST_OWNER.privateKey;
 const SIGNED_SEAL_PATH = (() => {
   const dir = mkdtempSync(join(tmpdir(), 'jewel-seal-'));
   const path = join(dir, 'SEAL.json');
-  writeFileSync(path, JSON.stringify(createSeal(ROOT, { key: SEAL_KEY }), null, 2));
+  writeFileSync(path, JSON.stringify(createSeal(ROOT, { privateKey: TEST_OWNER.privateKey }), null, 2));
   return path;
 })();
 
@@ -72,7 +73,7 @@ async function kernelFor({ mode = MODE.LIVE, workspace = fakeWorkspace(), model 
     ...loadConfig({}),
     dataDir: dir,
     mode,
-    sealKey: SEAL_KEY,
+    sealPublicKey: TEST_OWNER.publicKey,
     sealPath: SIGNED_SEAL_PATH,
     owner: 'FMB',
     accounts: ['fmb@example.com', 'primary'],
@@ -354,7 +355,7 @@ test('CHECK 11: tests use synthetic fixtures and require no live authorization',
 // --- Beyond the README ---------------------------------------------------
 test('BONUS: a broken seal puts Jewel in lockdown and only diagnostics run', async () => {
   const { kernel, principal } = await kernelFor();
-  kernel.executor.seal = { ok: false, signed: false };
+  kernel.executor.seal = { ok: false, signed: false, pinned: false, trust: 'broken' };
   kernel.policy.mode = MODE.LIVE;
 
   assert.equal((await kernel.executor.call('email.send', EMAIL, { principal })).status, 'denied');

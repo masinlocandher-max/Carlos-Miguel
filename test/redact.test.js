@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { redact, redactText, containsSecret, registerSecret, clearRegisteredSecrets, fingerprint } from '../src/core/redact.js';
+import { redact, redactText, containsSecret, registerSecret, clearRegisteredSecrets, fingerprint, isSensitiveKey } from '../src/core/redact.js';
 
 test('redacts sensitive keys regardless of value', () => {
   const out = redact({ apiKey: 'plainvalue', password: 'hunter2', ok: 'visible' });
@@ -50,4 +50,43 @@ test('fingerprint reveals shape but not value', () => {
   const fp = fingerprint('sk-supersecretvalue');
   assert.ok(!fp.includes('supersecret'));
   assert.match(fp, /^len\d+:/);
+});
+
+// --- Key matching must be precise, not merely aggressive -------------------
+
+test('sensitive keys are matched on segments, not substrings', () => {
+  for (const key of ['password', 'apiKey', 'api_key', 'API-KEY', 'accessToken', 'refresh_token',
+    'clientSecret', 'authorization', 'auth', 'Cookie', 'privateKey', 'JEWEL_SEAL_KEY', 'signature']) {
+    assert.equal(isSensitiveKey(key), true, `${key} should be redacted`);
+  }
+});
+
+test('over-redaction is a bug: honest fields stay visible', () => {
+  // An earlier unanchored regex redacted every one of these, hiding exactly
+  // the state an operator needs to verify.
+  for (const key of ['pinned', 'author', 'authorized', 'authenticated', 'authorizedAccounts',
+    'signed', 'publicKey', 'keyFingerprint', 'fingerprint', 'anchorSource', 'sessionCount',
+    'pinnedAt', 'tokenCount', 'inputTokenCount', 'tokenUsage', 'keys']) {
+    assert.equal(isSensitiveKey(key), false, `${key} should NOT be redacted`);
+  }
+});
+
+test('seal status survives redaction intact', () => {
+  const out = redact({
+    ok: true, signed: true, pinned: true, trust: 'pinned',
+    fingerprint: 'ABCD-1234', anchorSource: 'jewel.pub',
+    publicKey: '-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----',
+  });
+  assert.equal(out.pinned, true);
+  assert.equal(out.signed, true);
+  assert.equal(out.fingerprint, 'ABCD-1234');
+  assert.equal(out.anchorSource, 'jewel.pub');
+  assert.ok(String(out.publicKey).includes('BEGIN PUBLIC KEY'), 'a public key is public');
+});
+
+test('a private key is still redacted even next to public ones', () => {
+  const out = redact({ publicKey: 'pub', privateKey: 'priv', sealPrivateKey: 'priv2' });
+  assert.equal(out.publicKey, 'pub');
+  assert.equal(out.privateKey, '[redacted]');
+  assert.equal(out.sealPrivateKey, '[redacted]');
 });

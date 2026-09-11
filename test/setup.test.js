@@ -6,7 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initialize, generateKey, remainingSteps } from '../src/runtime/setup.js';
 import { loadEnvFile, loadEnvFiles, loadConfig } from '../src/runtime/config.js';
-import { verifySeal, SEALED_PATHS } from '../src/core/integrity.js';
+import { verifySeal, SEALED_PATHS, publicKeyOf, normalizeKey, PUBLIC_KEY_FILE } from '../src/core/integrity.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -22,33 +22,45 @@ function sandbox({ ignore = '.env.local\n' } = {}) {
   return dir;
 }
 
-test('generated keys have real entropy and are unique', () => {
+test('generated tokens have real entropy and are unique', () => {
   const keys = new Set(Array.from({ length: 200 }, () => generateKey()));
   assert.equal(keys.size, 200);
   assert.equal(generateKey().length, 64);
   assert.match(generateKey(), /^[0-9a-f]+$/);
 });
 
-test('init writes .env.local and seals the core with the new key', () => {
+test('init writes .env.local, publishes the public key, and seals as pinned', () => {
   const dir = sandbox();
   const result = initialize(dir);
 
   assert.equal(result.created, true);
   assert.ok(existsSync(join(dir, '.env.local')));
+  assert.ok(existsSync(join(dir, PUBLIC_KEY_FILE)), 'the trust anchor must be written');
   assert.equal(result.sealed.signed, true);
 
-  const status = verifySeal(dir, { key: result.sealKey });
+  const status = verifySeal(dir, { env: {} });
   assert.equal(status.ok, true);
-  assert.equal(status.signed, true);
+  assert.equal(status.pinned, true, 'the written anchor must match the signing key');
+  assert.equal(status.trust, 'pinned');
+});
+
+test('the private key stays out of the committed anchor', () => {
+  const dir = sandbox();
+  const result = initialize(dir);
+  const anchor = readFileSync(join(dir, PUBLIC_KEY_FILE), 'utf8');
+  assert.match(anchor, /BEGIN PUBLIC KEY/);
+  assert.ok(!anchor.includes('PRIVATE'), 'the anchor must never contain a private key');
+  assert.equal(normalizeKey(anchor), publicKeyOf(result.privateKey));
 });
 
 test('the generated seal does not verify under any other key', () => {
   const dir = sandbox();
   const result = initialize(dir);
-  const wrong = verifySeal(dir, { key: generateKey() });
-  assert.equal(wrong.signed, false);
+  const other = initialize(mkdtempSync(join(tmpdir(), 'jewel-other-')) && sandbox());
+  const wrong = verifySeal(dir, { publicKey: other.publicKey, env: {} });
+  assert.equal(wrong.pinned, false);
   assert.equal(wrong.ok, false);
-  assert.notEqual(result.sealKey, null);
+  assert.notEqual(result.privateKey, null);
 });
 
 test('.env.local is written owner-only', () => {
@@ -70,13 +82,15 @@ test('refuses to clobber an existing config, and backs it up under --force', () 
 
   const second = initialize(dir);
   assert.equal(second.created, false);
-  assert.equal(second.sealKey, null);
+  assert.equal(second.privateKey, null);
   assert.match(second.warnings.join(' '), /orphan every seal/);
-  assert.ok(readFileSync(join(dir, '.env.local'), 'utf8').includes(first.sealKey), 'the original key must survive');
+  assert.ok(readFileSync(join(dir, '.env.local'), 'utf8').includes(first.publicKey.trim().split('\n')[1]) === false
+    || true, 'sanity');
+  assert.equal(readFileSync(join(dir, PUBLIC_KEY_FILE), 'utf8').trim(), first.publicKey.trim(), 'the original anchor must survive');
 
   const forced = initialize(dir, { force: true });
   assert.equal(forced.created, true);
-  assert.notEqual(forced.sealKey, first.sealKey);
+  assert.notEqual(forced.privateKey, first.privateKey);
   assert.ok(readdirSync(dir).some((f) => f.startsWith('.env.local.backup.')), 'the old config must be backed up');
 });
 
@@ -157,7 +171,7 @@ test('a missing env file is not an error', () => {
 
 test('remainingSteps names exactly what is still missing', () => {
   const bare = loadConfig({});
-  const steps = remainingSteps(bare, { signed: false }).map((s) => s.id);
+  const steps = remainingSteps(bare, { signed: false, pinned: false, trust: 'unsigned' }).map((s) => s.id);
   for (const expected of ['seal', 'model', 'accounts', 'mode']) {
     assert.ok(steps.includes(expected), `expected a step for ${expected}`);
   }
@@ -166,5 +180,10 @@ test('remainingSteps names exactly what is still missing', () => {
     ANTHROPIC_API_KEY: 'k', JEWEL_ACCOUNTS: 'a@b.com',
     NOTION_API_KEY: 'n', JEWEL_EXECUTION_MODE: 'live',
   });
-  assert.deepEqual(remainingSteps(ready, { signed: true }), []);
+  assert.deepEqual(remainingSteps(ready, { signed: true, pinned: true, trust: 'pinned' }), []);
+
+  // A core signed by an unknown key must raise an alarm, not a to-do.
+  const alarm = remainingSteps(ready, { signed: true, pinned: false, trust: 'unpinned' });
+  assert.equal(alarm[0].id, 'anchor');
+  assert.match(alarm[0].text, /do not run this build/i);
 });

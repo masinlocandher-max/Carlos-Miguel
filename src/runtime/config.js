@@ -69,7 +69,10 @@ export function loadEnvFiles(root, env = process.env) {
 }
 
 const SECRET_KEYS = [
-  'JEWEL_SEAL_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NOTION_API_KEY',
+  // The Ed25519 private key. JEWEL_SEAL_PUBLIC_KEY is deliberately NOT here -
+  // a public key is meant to be public, and redacting it would hide the very
+  // fingerprint an operator needs to compare.
+  'JEWEL_SEAL_PRIVATE_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NOTION_API_KEY',
   'GITHUB_TOKEN', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN', 'GOOGLE_ACCESS_TOKEN',
 ];
 
@@ -85,7 +88,8 @@ export function loadConfig(env = process.env) {
     /** Safe by default: live mode must be chosen, never inherited. */
     mode,
     locale: env.JEWEL_LOCALE ?? 'en',
-    sealKey: env.JEWEL_SEAL_KEY ?? null,
+    sealPrivateKey: env.JEWEL_SEAL_PRIVATE_KEY ?? null,
+    sealPublicKey: env.JEWEL_SEAL_PUBLIC_KEY ?? null,
 
     anthropicKey: env.ANTHROPIC_API_KEY ?? null,
     anthropicModel: env.ANTHROPIC_MODEL ?? null,
@@ -127,7 +131,7 @@ export function configReport(cfg) {
     owner: cfg.owner,
     mode: cfg.mode,
     locale: cfg.locale,
-    sealKeyPresent: !!cfg.sealKey,
+    sealPrivateKeyPresent: !!cfg.sealPrivateKey,
     model: cfg.anthropicKey ? 'anthropic' : cfg.openaiKey ? 'openai' : 'offline',
     providers: {
       notion: !!cfg.notionApiKey,

@@ -54,7 +54,8 @@ jewel serve                  start the local control API
 
 **Approvals bind to the payload, not the action type.** Approving "send email"
 would be useless — the danger is in the content. Jewel approves
-`sha256(action + account + payload)`. Change one character of a body, one
+a canonical, domain-separated hash of the action, account and payload (see
+[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)). Change one character of a body, one
 recipient, or the sending account, and the approval no longer matches. Grants
 are single-use, expiring, revocable, and Jewel cannot approve her own request.
 
@@ -81,27 +82,44 @@ Secrets are redacted before writing, by pattern and by registered value.
 
 ## The seal — and its honest limit
 
-Every file that defines what Jewel can do is hashed, and the manifest is signed
-with a key only FMB holds. The runtime verifies on every boot and refuses to act
-if anything changed. CI verifies on every push.
+Every file that defines what Jewel can do is hashed into a manifest, and that
+manifest is signed with an **Ed25519 private key that only you hold**. The
+public key lives in `jewel.pub` and is committed — that is what a public key is
+for. The runtime verifies on every boot; CI verifies on every push using the
+public key alone, so **CI can check Jewel but can never sign one**.
 
-This does **not** make the files unwritable — nothing can. What it does is make
-a modified Jewel unusable and undeniable: without your key, an altered core
-fails verification, refuses to act, and fails CI. Someone can fork and gut her,
-but then it is their program wearing her name, and that is a visible choice
-rather than a silent one.
+Verification has three levels, and they are never collapsed:
 
-The repository ships **unsigned on purpose**. A signature committed publicly
-would be worthless. Create the real one once:
+| Level | Means | Jewel can |
+|---|---|---|
+| `broken` | files don't match the manifest | diagnostics only |
+| `unsigned` | hashes verify, nothing signed it | read, draft, remember |
+| `unpinned` | signed, but by a key that isn't yours | read, draft, remember |
+| `pinned` | signed by your key | everything, with approval |
+
+`unpinned` is the one that matters. An attacker who edits the core can re-sign
+it with *their* key — that seal verifies against itself. It is only refused
+because the signing key doesn't match a trust anchor held **outside** the seal:
+`jewel.pub`, or `JEWEL_SEAL_PUBLIC_KEY` pinned in CI as a plain variable.
+High-risk capability requires `pinned`, never merely `signed`.
+
+This does **not** make the files unwritable — nothing can. And an attacker who
+controls the repository can replace `jewel.pub` too, which is why the CI pin and
+the fingerprint printed by `jewel doctor` exist. **The anchor must be trusted
+out of band at least once.** No amount of cryptography removes that step; it can
+only be made visible.
+
+Set it up once:
 
 ```bash
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-export JEWEL_SEAL_KEY=<that value>
-npm run seal && npm run verify
+node tools/seal-cli.mjs keygen     # prints the private key ONCE
+JEWEL_SEAL_PRIVATE_KEY="$(cat your-key.pem)" npm run seal
+npm run verify                     # trust: pinned
 ```
 
-Until then Jewel reads, drafts, remembers and organizes — but will not take a
-high-risk action. Full ceremony in [docs/SEAL.md](docs/SEAL.md).
+Then add the **public** key as a repository variable named
+`JEWEL_SEAL_PUBLIC_KEY` (a variable, not a secret). Never give the private key
+to CI. Full ceremony in [docs/SEAL.md](docs/SEAL.md).
 
 ## Configuration
 

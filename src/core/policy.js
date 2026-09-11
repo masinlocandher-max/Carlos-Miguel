@@ -105,12 +105,19 @@ export function decide(capability, ctx) {
     obligations.push('simulate-only');
   }
 
-  // 5. Degraded (unsigned) seal ---------------------------------------------
-  if (ctx.seal?.ok && !ctx.seal.signed) {
+  // 5. Degraded seal ---------------------------------------------------------
+  // High risk requires a PINNED seal - one whose signing key matches a trust
+  // anchor held outside the seal document. A merely `signed` seal proves only
+  // that whoever produced it owned a key, which an attacker who re-signed the
+  // core also does. Accepting `signed` here would make the signature
+  // decorative.
+  if (ctx.seal?.ok && ctx.seal.pinned !== true) {
     const cap = ctx.maxRiskWhenUnsigned ?? RISK.MEDIUM;
     if (riskAtLeast(risk, RISK.HIGH) && riskAtLeast(risk, cap)) {
-      return deny(EFFECT.DENY, 'unsigned-seal',
-        'The core verifies but is not owner-signed, so high-risk actions are disabled. Re-seal with FMB\'s key to restore them.');
+      const reason = ctx.seal.trust === 'unpinned' && ctx.seal.signed
+        ? 'The core is signed, but by a key Jewel has no way to confirm is FMB\'s. High-risk actions stay disabled until the signing key matches a trusted one.'
+        : 'The core verifies but is not owner-signed, so high-risk actions are disabled. Re-seal with FMB\'s key to restore them.';
+      return deny(EFFECT.DENY, 'unpinned-seal', reason);
     }
   }
 
@@ -178,6 +185,8 @@ export class PolicyEngine {
       obligations: decision.obligations,
       mode: this.mode,
       sealSigned: !!ctx.seal?.signed,
+      sealPinned: !!ctx.seal?.pinned,
+      sealTrust: ctx.seal?.trust ?? 'unknown',
     }, {
       actor: ctx.principal?.id ?? 'unknown',
       subject: capability.name,

@@ -18,8 +18,68 @@ export function registerSecret(value) {
 
 export function clearRegisteredSecrets() { REGISTERED.clear(); }
 
-/** Key names whose values are always replaced, regardless of content. */
-const SENSITIVE_KEY = /(pass(word|phrase)?|secret|token|api[-_]?key|authorization|auth|cookie|session|credential|private[-_]?key|refresh[-_]?token|access[-_]?token|client[-_]?secret|signature|seal[-_]?key|bearer|otp|pin|ssn)/i;
+/**
+ * Key names whose values are always replaced, regardless of content.
+ *
+ * Matching is SEGMENT-based, not substring-based. An earlier version used an
+ * unanchored regex, which meant `pin` matched `pinned`, and `auth` matched
+ * `author`, `authorized` and `authenticated` - silently redacting honest,
+ * non-secret state and making the system harder to trust rather than safer.
+ * Over-redaction is not a safe default: it hides the fields an operator needs
+ * to verify.
+ */
+const SENSITIVE_SEGMENTS = new Set([
+  'password', 'passwd', 'passphrase', 'secret', 'secrets', 'token', 'credential',
+  'credentials', 'authorization', 'auth', 'cookie', 'cookies', 'otp', 'ssn',
+  'bearer', 'signature', 'jwt', 'pin', 'seed', 'mnemonic',
+]);
+
+/** `key` is only sensitive in company: apiKey yes, publicKey no. */
+const SENSITIVE_KEY_QUALIFIERS = new Set([
+  'api', 'private', 'secret', 'seal', 'signing', 'access', 'encryption', 'master', 'session',
+]);
+
+/**
+ * Quantity words. `token` is sensitive, but `tokenCount` is a usage metric and
+ * redacting it hides cost data while protecting nothing - the value is a number,
+ * not a credential.
+ */
+const QUANTITY = new Set(['count', 'counts', 'usage', 'limit', 'limits', 'budget', 'total', 'used', 'remaining', 'length', 'size']);
+
+/** Fields that are meant to be visible even though they look key-adjacent. */
+const PUBLIC_FIELDS = new Set([
+  'publickey', 'keyfingerprint', 'fingerprint', 'anchorsource', 'publickeyfile',
+]);
+
+/** Split a key into lowercase segments across camelCase, snake_case and kebab. */
+function segmentsOf(key) {
+  return String(key)
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[\s_\-.]+/)
+    .filter(Boolean)
+    .map((p) => p.toLowerCase());
+}
+
+/** @param {string} key */
+export function isSensitiveKey(key) {
+  const flat = String(key).toLowerCase().replace(/[_\-.]/g, '');
+  if (PUBLIC_FIELDS.has(flat)) return false;
+
+  const parts = segmentsOf(key);
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+    if (SENSITIVE_SEGMENTS.has(part)) {
+      const after = parts[i + 1];
+      if ((part === 'token' || part === 'tokens') && after && QUANTITY.has(after)) continue;
+      return true;
+    }
+    if (part === 'key' || part === 'keys') {
+      const before = parts[i - 1];
+      if (before && SENSITIVE_KEY_QUALIFIERS.has(before)) return true;
+    }
+  }
+  return false;
+}
 
 /** Value shapes that look like credentials even under an innocent key name. */
 const PATTERNS = [
@@ -66,7 +126,7 @@ export function redact(value, seen = new WeakSet()) {
   if (value instanceof Date) return value.toISOString();
   const out = {};
   for (const [k, v] of Object.entries(value)) {
-    if (SENSITIVE_KEY.test(k)) { out[k] = '[redacted]'; continue; }
+    if (isSensitiveKey(k)) { out[k] = '[redacted]'; continue; }
     out[k] = redact(v, seen);
   }
   return out;

@@ -125,12 +125,17 @@ async function init(rest) {
     out(`  sealed      ${result.sealed.files} core files, seal #${result.sealed.sealNumber}${result.sealed.signed ? ', owner-signed' : ''}`);
   }
   out('');
-  out('  ┌─ SAVE THIS NOW ────────────────────────────────────────────────┐');
-  out('  │ Your seal key. Copy it into your password manager.             │');
+  out(`  wrote       ${'jewel.pub'}  (your public key - commit this)`);
+  out(`  fingerprint ${result.fingerprint}`);
+  out('');
+  out('  ┌─ SAVE THIS NOW - SHOWN ONCE ───────────────────────────────────┐');
+  out('  │ Your PRIVATE signing key. Password manager, now.               │');
   out('  │ Lose it and you cannot re-seal the core.                       │');
+  out('  │ Never commit it. NEVER give it to CI - CI verifies with the    │');
+  out('  │ public key and must not be able to sign.                       │');
   out('  └────────────────────────────────────────────────────────────────┘');
   out('');
-  out(`  JEWEL_SEAL_KEY=${result.sealKey}`);
+  out(result.privateKey.trim());
   out('');
   out('  It is also in .env.local. Never commit that file, never paste it into');
   out('  chat, never put it in Notion.');
@@ -154,7 +159,9 @@ function doctor(kernel, config) {
   out(`  mode            ${cfg.mode}${cfg.mode === 'dryrun' ? '  (nothing reaches the outside world)' : '  (LIVE - actions have real effects)'}`);
   out(`  capabilities    ${kernel.registry.names().length}  fingerprint ${kernel.capabilityFingerprint.slice(0, 16)}`);
   out('');
-  out(`  seal            ${kernel.seal.ok ? 'OK' : 'BROKEN'}${kernel.seal.signed ? ' - owner-signed' : ' - unsigned'}`);
+  out(`  seal            ${kernel.seal.ok ? 'OK' : 'BROKEN'} - trust: ${kernel.seal.trust}`);
+  out(`  signing key     ${kernel.seal.fingerprint}   (anchor: ${kernel.seal.anchorSource})`);
+  out('                  Compare that fingerprint against the one you saved at setup.');
   out(`                  ${kernel.seal.summary}`);
   for (const v of kernel.seal.violations ?? []) out(`                  ! ${v.path} (${v.reason})`);
   if (kernel.lockdown) out('                  LOCKDOWN: only diagnostics will run.');
@@ -178,7 +185,11 @@ function doctor(kernel, config) {
 
   out('');
   const gaps = [];
-  if (!kernel.seal.signed) gaps.push('Re-seal with your key to enable high-risk capabilities: JEWEL_SEAL_KEY=... npm run seal');
+  if (kernel.seal.trust === 'unpinned') {
+    gaps.push('The core is signed by a key that does not match your trusted one. Do not run this build until you know why.');
+  } else if (!kernel.seal.pinned) {
+    gaps.push('Re-seal with your key to enable high-risk capabilities: JEWEL_SEAL_PRIVATE_KEY=... npm run seal');
+  }
   if (cfg.model === 'offline') gaps.push('No model key configured. Jewel cannot generate answers.');
   if (!cfg.authorizedAccounts) gaps.push('No authorized accounts. Set JEWEL_ACCOUNTS before any email or calendar work.');
   if (cfg.mode === 'dryrun') gaps.push('Dry run. Set JEWEL_EXECUTION_MODE=live when you are ready for real actions.');

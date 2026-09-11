@@ -32,19 +32,20 @@ jobs:
       - name: Verify the capability seal
         run: node tools/seal-cli.mjs verify
 
-      # When FMB's key is configured as a repository secret, CI also checks the
-      # owner signature. Without it the step reports unsigned rather than
-      # failing, so forks and outside contributors still get a useful run.
-      - name: Verify the owner signature
+      # CI holds NO signing key. JEWEL_SEAL_PUBLIC_KEY is a public value and is
+      # configured as a repository VARIABLE, not a secret. Pinning it here is
+      # what catches an attacker who edits the core, re-signs with their own
+      # key and rewrites jewel.pub - that build verifies against itself but
+      # fails against the pinned key.
+      - name: Verify the owner signature against the pinned public key
         env:
-          JEWEL_SEAL_KEY: ${{ secrets.JEWEL_SEAL_KEY }}
+          JEWEL_SEAL_PUBLIC_KEY: ${{ vars.JEWEL_SEAL_PUBLIC_KEY }}
         run: |
-          if [ -z "${JEWEL_SEAL_KEY}" ]; then
-            echo "::warning::JEWEL_SEAL_KEY is not configured. The owner signature was not verified."
-            node tools/seal-cli.mjs verify
-          else
-            node tools/seal-cli.mjs verify
+          if [ -z "${JEWEL_SEAL_PUBLIC_KEY}" ]; then
+            echo "::warning::JEWEL_SEAL_PUBLIC_KEY is not set as a repository variable."
+            echo "::warning::The seal is only checked against the in-repo jewel.pub, which an attacker who controls the repo could also replace."
           fi
+          node tools/seal-cli.mjs verify
 
       - name: Run the runtime test suite
         run: npm test

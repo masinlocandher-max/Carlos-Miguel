@@ -5,7 +5,7 @@ import { RISK } from '../src/core/constitution.js';
 
 const OK_CTX = {
   principal: { authenticated: true, id: 'FMB', isOwner: true, scopes: ['email', 'calendar'], accounts: ['fmb@example.com'] },
-  seal: { ok: true, signed: true },
+  seal: { ok: true, signed: true, pinned: true, trust: 'pinned' },
   mode: MODE.LIVE,
 };
 
@@ -59,13 +59,13 @@ test('authority is never inferred from an account name', () => {
 });
 
 test('INV-10: a broken seal puts Jewel in lockdown', () => {
-  const d = decide({ name: 'memory.search', risk: RISK.LOW }, { ...OK_CTX, seal: { ok: false, signed: false } });
+  const d = decide({ name: 'memory.search', risk: RISK.LOW }, { ...OK_CTX, seal: { ok: false, signed: false, pinned: false, trust: 'broken' } });
   assert.equal(d.effect, EFFECT.DENY);
   assert.equal(d.reason, 'seal-broken');
 });
 
 test('only explicitly diagnostic capabilities survive a broken seal', () => {
-  const broken = { ...OK_CTX, seal: { ok: false, signed: false } };
+  const broken = { ...OK_CTX, seal: { ok: false, signed: false, pinned: false, trust: 'broken' } };
   assert.equal(decide({ name: 'system.doctor', risk: RISK.NONE, diagnostic: true }, broken).effect, EFFECT.ALLOW);
   // Reading private memory is low-risk to the world and catastrophic to FMB.
   // "risk: none" must NOT be a lockdown bypass.
@@ -73,9 +73,19 @@ test('only explicitly diagnostic capabilities survive a broken seal', () => {
 });
 
 test('an unsigned seal disables high-risk capability', () => {
-  const ctx = { ...OK_CTX, seal: { ok: true, signed: false } };
-  assert.equal(decide({ name: 'gmail.send', risk: RISK.HIGH, gate: 'email.send', sideEffect: true }, ctx).reason, 'unsigned-seal');
+  const ctx = { ...OK_CTX, seal: { ok: true, signed: false, pinned: false, trust: 'unsigned' } };
+  assert.equal(decide({ name: 'gmail.send', risk: RISK.HIGH, gate: 'email.send', sideEffect: true }, ctx).reason, 'unpinned-seal');
   assert.equal(decide({ name: 'notion.search', risk: RISK.MEDIUM }, ctx).effect, EFFECT.ALLOW);
+});
+
+test('a seal signed by an UNTRUSTED key also disables high-risk capability', () => {
+  // This is the attack the symmetric design could not distinguish: the core is
+  // signed, just not by FMB. `signed` alone must never be enough.
+  const ctx = { ...OK_CTX, seal: { ok: true, signed: true, pinned: false, trust: 'unpinned' } };
+  const d = decide({ name: 'gmail.send', risk: RISK.HIGH, gate: 'email.send', sideEffect: true }, ctx);
+  assert.equal(d.effect, EFFECT.DENY);
+  assert.equal(d.reason, 'unpinned-seal');
+  assert.match(d.message, /no way to confirm is FMB/);
 });
 
 test('dry-run adds a simulate-only obligation', () => {

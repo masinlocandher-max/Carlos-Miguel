@@ -39,7 +39,12 @@ export async function boot(opts) {
   const clock = opts.clock ?? systemClock;
 
   // 1. Seal, before anything else exists.
-  const seal = verifySeal(root, { key: config.sealKey, sealPath: config.sealPath ?? null });
+  // Verification uses the PUBLIC anchor only. The runtime never needs, and
+  // must never be given, the signing key.
+  const seal = verifySeal(root, {
+    publicKey: config.sealPublicKey ?? null,
+    sealPath: config.sealPath ?? null,
+  });
 
   // 2. Audit chain.
   const dir = dataDir(root, config.dataDir);
@@ -83,6 +88,9 @@ export async function boot(opts) {
     capabilityFingerprint,
     sealed: seal.ok,
     signed: seal.signed,
+    pinned: seal.pinned,
+    trust: seal.trust,
+    keyFingerprint: seal.fingerprint,
     lockdown: !seal.ok,
   }, { outcome: seal.ok ? 'ok' : 'lockdown' });
 

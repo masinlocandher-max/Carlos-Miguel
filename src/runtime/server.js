@@ -96,7 +96,11 @@ export function createApi(kernel, opts = {}) {
     // liveness and lockdown state only, so the shell can render an honest
     // "not connected" screen without a token.
     if (path === '/health' && method === 'GET') {
-      return ok(res, { ok: true, lockdown: kernel.lockdown, sealed: kernel.seal.ok, signed: kernel.seal.signed });
+      return ok(res, {
+        ok: true, lockdown: kernel.lockdown,
+        sealed: kernel.seal.ok, signed: kernel.seal.signed,
+        pinned: kernel.seal.pinned, trust: kernel.seal.trust,
+      });
     }
 
     if (!authorized(req)) {
@@ -114,7 +118,12 @@ export function createApi(kernel, opts = {}) {
             owner: kernel.config.owner,
             mode: kernel.config.mode,
             lockdown: kernel.lockdown,
-            seal: { ok: kernel.seal.ok, signed: kernel.seal.signed, summary: kernel.seal.summary, violations: kernel.seal.violations },
+            seal: {
+              ok: kernel.seal.ok, signed: kernel.seal.signed, pinned: kernel.seal.pinned,
+              trust: kernel.seal.trust, fingerprint: kernel.seal.fingerprint,
+              anchorSource: kernel.seal.anchorSource,
+              summary: kernel.seal.summary, violations: kernel.seal.violations,
+            },
             audit: { intact: chain.ok, records: chain.length, brokenAt: chain.brokenAt },
             capabilities: kernel.registry.names().length,
             capabilityFingerprint: kernel.capabilityFingerprint,

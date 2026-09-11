@@ -15,7 +15,7 @@ import { object, str, arr } from '../src/core/schema.js';
 
 const PRINCIPAL = { authenticated: true, id: 'FMB', isOwner: true, scopes: ['email'], accounts: ['fmb@example.com'] };
 
-function harness({ mode = MODE.LIVE, seal = { ok: true, signed: true }, sends = [] } = {}) {
+function harness({ mode = MODE.LIVE, seal = { ok: true, signed: true, pinned: true, trust: 'pinned' }, sends = [] } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'jewel-exec-'));
   const clock = fixedClock('2026-01-01T00:00:00Z');
   const audit = new AuditLog(join(dir, 'audit.jsonl'), { clock });
@@ -136,7 +136,7 @@ test('forbidden capability is refused outright', async () => {
 });
 
 test('INV-10: a broken seal blocks everything except declared diagnostics', async () => {
-  const { exec } = harness({ seal: { ok: false, signed: false } });
+  const { exec } = harness({ seal: { ok: false, signed: false, pinned: false, trust: 'broken' } });
   assert.equal((await exec.call('mail.send', EMAIL, { principal: PRINCIPAL })).status, 'denied');
   assert.equal((await exec.call('memory.peek', { q: 'x' }, { principal: PRINCIPAL })).status, 'denied');
   assert.equal((await exec.call('system.health', {}, { principal: PRINCIPAL })).status, 'succeeded');
