@@ -18,11 +18,12 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 6 | Approval queue (payload-bound) | DONE | 13 tests, INV-1/INV-2 |
 | 7 | Idempotency ledger | DONE | 6 tests, INV-5 |
 | 8 | Policy engine | DONE | 13 tests |
-| 9 | Memory / knowledge with provenance | TODO | |
-| 10 | Tool registry | TODO | |
+| 9 | Memory / knowledge with provenance | DONE | 12 tests, revocation purges content |
+| 10 | Tool registry | DONE | 10 tests, sealed after boot |
 | 11 | Built-in tools | TODO | |
 | 12 | Provider adapters (OpenAI, Notion, Gmail, Calendar, Drive, GitHub) | TODO | |
-| 13 | Agent loop (planner + executor) | TODO | |
+| 13a | Executor (enforced call path) | DONE | 15 tests |
+| 13b | Agent loop + planner | TODO | |
 | 14 | Kernel (boot + wiring) | TODO | |
 | 15 | CLI + HTTP API | TODO | |
 | 16 | Seal ceremony + CI enforcement | TODO | |

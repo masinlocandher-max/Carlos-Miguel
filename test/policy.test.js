@@ -64,9 +64,12 @@ test('INV-10: a broken seal puts Jewel in lockdown', () => {
   assert.equal(d.reason, 'seal-broken');
 });
 
-test('diagnostics stay available under a broken seal', () => {
-  const d = decide({ name: 'system.doctor', risk: RISK.NONE }, { ...OK_CTX, seal: { ok: false, signed: false } });
-  assert.equal(d.effect, EFFECT.ALLOW);
+test('only explicitly diagnostic capabilities survive a broken seal', () => {
+  const broken = { ...OK_CTX, seal: { ok: false, signed: false } };
+  assert.equal(decide({ name: 'system.doctor', risk: RISK.NONE, diagnostic: true }, broken).effect, EFFECT.ALLOW);
+  // Reading private memory is low-risk to the world and catastrophic to FMB.
+  // "risk: none" must NOT be a lockdown bypass.
+  assert.equal(decide({ name: 'memory.search', risk: RISK.NONE }, broken).effect, EFFECT.DENY);
 });
 
 test('an unsigned seal disables high-risk capability', () => {

@@ -13,6 +13,7 @@
  */
 import { existsSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, renameSync, readdirSync, unlinkSync, openSync, fsyncSync, closeSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import { NotFoundError, ValidationError } from './errors.js';
 import { canonicalJson } from './ids.js';
 
@@ -74,11 +75,32 @@ export class JsonTable {
     ensureDir(dir);
   }
 
-  _path(id) {
-    if (typeof id !== 'string' || !/^[A-Za-z0-9._-]{1,128}$/.test(id)) {
+  /**
+   * Record ids are logical keys (`notion:projects`, `fmb@example.com`), not
+   * filenames. Encode them so every id is representable on any filesystem and
+   * no id can escape the table directory. The encoding is injective, so two
+   * distinct ids can never collide onto one file.
+   */
+  _encode(id) {
+    if (typeof id !== 'string' || id.length === 0 || id.length > 512) {
       throw new ValidationError('Invalid record id', { id: String(id).slice(0, 64) });
     }
-    return join(this.dir, `${id}.json`);
+    if (id.includes('\0')) throw new ValidationError('Invalid record id', {});
+    const encoded = id.replace(/[^A-Za-z0-9._-]/g, (c) =>
+      `~${c.charCodeAt(0).toString(16).padStart(2, '0')}`);
+    // Long or dot-only keys fall back to a hashed name, still injective.
+    if (encoded.length > 180 || /^\.+$/.test(encoded)) {
+      return `h_${createHash('sha256').update(id, 'utf8').digest('hex')}`;
+    }
+    return encoded;
+  }
+
+  _decode(name) {
+    return name.replace(/~([0-9a-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  }
+
+  _path(id) {
+    return join(this.dir, `${this._encode(id)}.json`);
   }
 
   has(id) { return existsSync(this._path(id)); }
@@ -120,15 +142,24 @@ export class JsonTable {
   }
 
   ids() {
-    return readdirSync(this.dir).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort();
+    return readdirSync(this.dir)
+      .filter((f) => f.endsWith('.json') && !f.startsWith('h_'))
+      .map((f) => this._decode(f.slice(0, -5)))
+      .sort();
   }
 
-  /** @param {(r:object)=>boolean} [predicate] */
+  /**
+   * Read every record in the table. Reads files directly so hashed-name
+   * records (long keys) are included, which `ids()` cannot represent.
+   * @param {(r:object)=>boolean} [predicate]
+   */
   list(predicate) {
     const out = [];
-    for (const id of this.ids()) {
-      const rec = this.find(id);
-      if (!rec) continue;
+    for (const file of readdirSync(this.dir)) {
+      if (!file.endsWith('.json')) continue;
+      let rec;
+      try { rec = JSON.parse(readFileSync(join(this.dir, file), 'utf8')); }
+      catch { continue; }
       if (!predicate || predicate(rec)) out.push(rec);
     }
     return out;

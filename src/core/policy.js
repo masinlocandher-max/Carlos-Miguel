@@ -53,7 +53,8 @@ export function riskAtLeast(risk, threshold) {
 
 /**
  * @param {{ name:string, risk:string, gate?:string|null, sideEffect?:boolean,
- *           account?:string|null, scope?:string|null, forbidden?:string|null }} capability
+ *           account?:string|null, scope?:string|null, forbidden?:string|null,
+ *           diagnostic?:boolean }} capability
  * @param {PolicyContext} ctx
  * @returns {Decision}
  */
@@ -66,11 +67,12 @@ export function decide(capability, ctx) {
   });
 
   // 1. Seal ------------------------------------------------------------------
-  if (!ctx.seal?.ok) {
-    if (capability.risk !== RISK.NONE || capability.sideEffect) {
-      return deny(EFFECT.DENY, 'seal-broken',
-        'The capability seal does not verify, so Jewel is running in lockdown. Only diagnostics are available until the core is re-sealed.');
-    }
+  // Lockdown is deliberately narrow: ONLY capabilities that opt in as
+  // diagnostics survive a broken seal. "Low risk" is not a pass - reading
+  // private memory is harmless to the world and catastrophic to FMB.
+  if (!ctx.seal?.ok && capability.diagnostic !== true) {
+    return deny(EFFECT.DENY, 'seal-broken',
+      'The capability seal does not verify, so Jewel is in lockdown. Only diagnostics run until the core is re-sealed.');
   }
 
   // 2. Constitutional refusals ----------------------------------------------
