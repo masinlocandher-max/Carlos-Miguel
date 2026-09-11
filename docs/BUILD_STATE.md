@@ -20,13 +20,14 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 8 | Policy engine | DONE | 13 tests |
 | 9 | Memory / knowledge with provenance | DONE | 12 tests, revocation purges content |
 | 10 | Tool registry | DONE | 10 tests, sealed after boot |
-| 11 | Built-in tools | TODO | |
-| 12 | Provider adapters (OpenAI, Notion, Gmail, Calendar, Drive, GitHub) | TODO | |
+| 11 | Built-in tools | DONE | 20 capabilities |
+| 12 | Provider adapters | DONE | unconfigured throws, never returns empty |
 | 13a | Executor (enforced call path) | DONE | 15 tests |
-| 13b | Agent loop + planner | TODO | |
-| 14 | Kernel (boot + wiring) | TODO | |
-| 15 | CLI + HTTP API | TODO | |
-| 16 | Seal ceremony + CI enforcement | TODO | |
+| 13b | Agent loop + planner | DONE | bounded by steps and wall clock |
+| 14 | Kernel (boot + wiring) | DONE | seal-first boot, registry frozen |
+| 15 | CLI | DONE | doctor/ask/approvals/audit/memory/tools/call |
+| 15b | HTTP API | TODO | CLI is the supported surface for now |
+| 16 | Seal ceremony | DONE | tools/seal-cli.mjs; CI pending |
 | 17 | Acceptance-check suite (README) | TODO | |
 
 ## Invariants under test
