@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+.jewel/
+*.log
+.DS_Store
+coverage/
+tmp/
