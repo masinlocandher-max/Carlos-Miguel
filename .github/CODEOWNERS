@@ -1,0 +1,20 @@
+# Jewel OS - ownership of the capability surface.
+#
+# CODEOWNERS is a review requirement, not a lock. The enforceable protection is
+# the capability seal (SEAL.json + JEWEL_SEAL_KEY): a change to any sealed file
+# fails CI and refuses to run until FMB re-seals it with her own key.
+#
+# This file exists so the review lands in front of the right person first.
+
+* @masinlocandher-max
+
+# The sealed core. Changing anything here requires an owner re-seal ceremony.
+/src/core/                @masinlocandher-max
+/src/tools/index.js       @masinlocandher-max
+/src/adapters/            @masinlocandher-max
+/src/runtime/config.js    @masinlocandher-max
+/jewel.mjs                @masinlocandher-max
+/SEAL.json                @masinlocandher-max
+/tools/seal-cli.mjs       @masinlocandher-max
+/AGENTS.md                @masinlocandher-max
+/.github/                 @masinlocandher-max

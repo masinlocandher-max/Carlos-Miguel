@@ -26,9 +26,10 @@ DONE = written, tested, committed · WIP = in progress · TODO = not started
 | 13b | Agent loop + planner | DONE | bounded by steps and wall clock |
 | 14 | Kernel (boot + wiring) | DONE | seal-first boot, registry frozen |
 | 15 | CLI | DONE | doctor/ask/approvals/audit/memory/tools/call |
-| 15b | HTTP API | TODO | CLI is the supported surface for now |
-| 16 | Seal ceremony | DONE | tools/seal-cli.mjs; CI pending |
-| 17 | Acceptance-check suite (README) | TODO | |
+| 15b | HTTP API | NOT BUILT | CLI is the supported surface; deliberate |
+| 16 | Seal ceremony + CI enforcement | DONE | seal-cli, CI workflow, CODEOWNERS |
+| 17 | Acceptance-check suite (README) | DONE | all 11 checks executable, 123 tests total |
+| 18 | Documentation | DONE | README, ARCHITECTURE, SEAL |
 
 ## Invariants under test
 INV-1 approval binding · INV-2 edit invalidates · INV-3 data-not-instruction ·

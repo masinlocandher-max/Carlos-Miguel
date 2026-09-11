@@ -54,6 +54,18 @@ export const SEALED_PATHS = Object.freeze([
   'src/core/agent/planner.js',
   'src/core/agent/executor.js',
   'src/core/kernel.js',
+  // The capability surface itself. tools/index.js declares every risk tier and
+  // approval gate - leaving it unsealed would let a builder quietly drop the
+  // gate on email.send without breaking verification.
+  'src/tools/index.js',
+  // The only code that reaches the outside world.
+  'src/adapters/http.js',
+  'src/adapters/model.js',
+  'src/adapters/workspace.js',
+  // Boot surface: config decides mode and authorized accounts; jewel.mjs wires
+  // the kernel. Both can change behaviour without touching core/.
+  'src/runtime/config.js',
+  'jewel.mjs',
 ]);
 
 export const SEAL_FILE = 'SEAL.json';
@@ -115,15 +127,21 @@ export function createSeal(root, opts = {}) {
  */
 
 /**
- * Verify the sealed core against SEAL.json.
+ * Verify the sealed core against a seal document.
  * Never throws for a tampered core - returns a status the caller can act on,
  * so the failure path itself is auditable.
+ *
+ * `sealPath` exists for key rotation and for testing against a seal signed
+ * with a different key. It is NOT a bypass: whichever document is named, every
+ * file hash and the owner signature are still checked in full, and choosing
+ * the path requires already controlling how the process starts.
+ *
  * @param {string} root
- * @param {{ key?: string|null }} [opts]
+ * @param {{ key?: string|null, sealPath?: string|null }} [opts]
  * @returns {SealStatus}
  */
 export function verifySeal(root, opts = {}) {
-  const sealPath = join(root, SEAL_FILE);
+  const sealPath = opts.sealPath ?? join(root, SEAL_FILE);
   if (!existsSync(sealPath)) {
     return { ok: false, signed: false, present: false, root: '', violations: [{ path: SEAL_FILE, reason: 'missing' }], summary: 'SEAL.json is missing. The capability core is unsealed.' };
   }
@@ -183,11 +201,11 @@ export function verifySeal(root, opts = {}) {
 /**
  * Enforce the seal at boot.
  * @param {string} root
- * @param {{ allowUnsealed?: boolean, key?: string|null }} [opts]
+ * @param {{ allowUnsealed?: boolean, key?: string|null, sealPath?: string|null }} [opts]
  * @returns {SealStatus}
  */
 export function enforceSeal(root, opts = {}) {
-  const status = verifySeal(root, { key: opts.key });
+  const status = verifySeal(root, { key: opts.key, sealPath: opts.sealPath });
   if (status.ok) return status;
   if (opts.allowUnsealed && status.violations.every((v) => v.path === SEAL_FILE && v.reason === 'missing')) {
     return status;

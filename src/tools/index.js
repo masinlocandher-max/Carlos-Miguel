@@ -235,6 +235,37 @@ export function builtinTools(deps) {
       run: async (a) => workspace.google.freeBusy(a),
     },
 
+    {
+      name: 'calendar.create_event',
+      description: 'Create a calendar event. Always requires FMB\'s approval, and re-checks availability immediately before writing.',
+      risk: RISK.HIGH, gate: 'calendar.write', sideEffect: true, scope: 'calendar',
+      accountOf: (a) => a.calendarId,
+      input: object({
+        calendarId: str({ minLength: 1 }),
+        summary: str({ minLength: 1, maxLength: 300 }),
+        start: str({ format: 'date-time' }),
+        end: str({ format: 'date-time' }),
+        timezone: str({ minLength: 1 }),
+        attendees: arr(str({ format: 'email' }), { default: [] }),
+      }),
+      summarize: (a) => `Create "${a.summary}" ${a.start} to ${a.end} (${a.timezone}) on ${a.calendarId} with ${a.attendees.length} attendee(s)`,
+      simulate: async (a) => ({ simulated: true, wouldCreate: a.summary, start: a.start }),
+      run: async (a) => {
+        // Availability is re-checked HERE, at write time, not when the
+        // approval was raised. A check from an hour ago is not a check.
+        const availability = await workspace.google.freeBusy({
+          calendarId: a.calendarId, timeMin: a.start, timeMax: a.end,
+        });
+        if (!availability.free) {
+          throw new ProviderError(
+            'That window is no longer free. Jewel did not create the event.',
+            { conflicts: availability.busy, recheckedAt: availability.checkedAt },
+          );
+        }
+        return workspace.google.createEvent(a);
+      },
+    },
+
     // ---- Drive ----------------------------------------------------------
     {
       name: 'drive.search',

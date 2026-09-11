@@ -170,6 +170,18 @@ export class GoogleAdapter extends BaseAdapter {
     return { busy, free: busy.length === 0, checkedAt: new Date().toISOString() };
   }
 
+  /** Create an event. MUST be gated, and availability re-checked, by the caller. */
+  async createEvent({ calendarId = 'primary', summary, start, end, timezone, attendees = [] }) {
+    this._assert();
+    const e = await this.calendar.post(`/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+      summary,
+      start: { dateTime: start, timeZone: timezone },
+      end: { dateTime: end, timeZone: timezone },
+      attendees: attendees.map((email) => ({ email })),
+    });
+    return { eventId: e?.id ?? null, htmlLink: e?.htmlLink ?? null, status: e?.status ?? null };
+  }
+
   async searchDrive({ query, max = 10 }) {
     this._assert();
     const data = await this.drive.get('/drive/v3/files', {

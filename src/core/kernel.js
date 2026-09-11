@@ -39,7 +39,7 @@ export async function boot(opts) {
   const clock = opts.clock ?? systemClock;
 
   // 1. Seal, before anything else exists.
-  const seal = verifySeal(root, { key: config.sealKey });
+  const seal = verifySeal(root, { key: config.sealKey, sealPath: config.sealPath ?? null });
 
   // 2. Audit chain.
   const dir = dataDir(root, config.dataDir);
