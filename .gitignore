@@ -1,9 +1,60 @@
-node_modules/
+# Environment / secrets - never commit real values
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Jewel runtime state: audit ledger, approvals, memory, idempotency.
+# This is private operational data and never belongs in git.
 .jewel/
-*.log
-.DS_Store
+.qa/
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/install-state.gz
+
+# Build output
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# Testing / coverage
 coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
 tmp/
+
+# Deploy
+.vercel
+
+# Private likeness inputs and outputs must never enter public history
+.private/
+private-assets/
+docs/references/
+docs/previews/
+public/jewel/
+**/*identity-board*
+**/*likeness*
+**/identity.bin
+**/identity.json
+**/filaments.bin
+*.bundle

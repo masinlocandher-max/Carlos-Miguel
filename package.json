@@ -2,18 +2,43 @@
   "name": "jewel-os",
   "version": "1.0.0",
   "private": true,
-  "description": "Jewel OS - FMB's sealed executive-assistant agent runtime.",
+  "description": "Jewel OS - FMB's sealed executive-assistant agent runtime and command centre.",
   "type": "module",
   "engines": { "node": ">=22.0.0" },
   "bin": { "jewel": "./jewel.mjs" },
   "scripts": {
     "jewel": "node jewel.mjs",
-    "test": "node --test \"test/**/*.test.js\"",
+    "serve": "node jewel.mjs serve",
+    "doctor": "node jewel.mjs doctor",
     "seal": "node tools/seal-cli.mjs seal",
     "verify": "node tools/seal-cli.mjs verify",
-    "serve": "node jewel.mjs serve",
-    "doctor": "node jewel.mjs doctor"
+
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:ui": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "test:browser": "node tests/browser.cjs",
+    "test:all": "npm run test && npm run test:ui",
+
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "format": "prettier --write src/App.tsx src/main.tsx src/components src/visual src/lib index.html vite.config.ts"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "comment:dependencies": "The sealed runtime (src/core, src/adapters, src/tools, src/runtime, jewel.mjs) has ZERO dependencies by design - nothing in the supply chain can alter Jewel's capability. Everything below belongs to the command-centre UI, which lives OUTSIDE the seal boundary and can only reach the runtime through the authenticated local API. It cannot grant itself a capability.",
+  "dependencies": {
+    "@fontsource/manrope": "^5.3.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^4.7.0",
+    "playwright": "1.63.0",
+    "prettier": "^3.9.6",
+    "typescript": "~5.8.3",
+    "vite": "^6.4.1"
+  }
 }
