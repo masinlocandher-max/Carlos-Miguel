@@ -62,8 +62,15 @@ are single-use, expiring, revocable, and Jewel cannot approve her own request.
 **Retrieved content can never become instruction.** An email, a Notion page or a
 file is wrapped as data with a delimiter it cannot forge. Injection patterns are
 flagged so you can see the attempt — but the flagging is telemetry, never the
-gate. An attacker who fully controls the model still cannot act, because
-approval happens out of band against a payload you can read in full.
+gate. Even a perfectly disguised injection that convinces the model to send
+something produces an approval request, not a send.
+
+To be precise about that claim: **controlling the model is not sufficient to
+act.** It has to be combined with control of the approval path, the executor,
+the signing key, the host, or the provider credentials — and if any of those
+falls, this does not save you. The full assumption list is in
+[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md), including where the model is
+weakest.
 
 **Retries cannot send twice.** Every side effect claims an idempotency key and
 settles it. An attempt that starts and never reports back resolves to
@@ -197,6 +204,7 @@ access.
 
 ## Documentation
 
+- [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md) — what Jewel defends against, what she does not, and the assumptions each guarantee rests on
 - [docs/QUICKSTART.md](docs/QUICKSTART.md) — setup, the approval loop, and what to do when something is wrong
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, the ten invariants, why each choice was made
 - [docs/SEAL.md](docs/SEAL.md) — the seal ceremony and its honest limits

@@ -1,10 +1,10 @@
 {
   "version": 2,
   "algorithm": "sha256+ed25519",
-  "sealedAt": "2026-09-11T13:13:52.914Z",
+  "sealedAt": "2026-09-11T13:16:04.031Z",
   "sealedBy": "FMB",
   "constitutionVersion": "1.0.0",
-  "root": "1f2e80252095c7c8193582600f5ecc107cf5fd8223530d29c8bd2497c4d96f9f",
+  "root": "3287e73ea32c3c8d2e103d9f358f5ec5c51d820739cc1db139ee2db1f77a476b",
   "files": [
     {
       "path": "jewel.mjs",
@@ -28,8 +28,8 @@
     },
     {
       "path": "src/core/agent/executor.js",
-      "sha256": "72e3d9054d74212391c2c0985186b0231d2c1e278974d0d568e81a29423cc710",
-      "bytes": 10558
+      "sha256": "37581f0179d2e6e01ace9e4e4d91b3025aaac4c1fea827546929cea058568b1a",
+      "bytes": 10805
     },
     {
       "path": "src/core/agent/loop.js",
@@ -43,13 +43,13 @@
     },
     {
       "path": "src/core/approvals.js",
-      "sha256": "0c98df3c08f4e0b1f48de7ee8d672271f6a2e5b3c4e703ef1da9477eeaec2bad",
-      "bytes": 12120
+      "sha256": "6d814d002bea34349305ede1435fe4e647fe30fee27d58681b13f5d5be96aec6",
+      "bytes": 13420
     },
     {
       "path": "src/core/audit.js",
-      "sha256": "4efd936112d180bae9ed5d9012df17d9e74b86be1886b344811af629517c0a53",
-      "bytes": 5027
+      "sha256": "ce3297d2ff27f67d2e9e609367b681f80e3e4ee387b98eaa46c6b4bedf0cb55d",
+      "bytes": 5287
     },
     {
       "path": "src/core/clock.js",
@@ -68,13 +68,13 @@
     },
     {
       "path": "src/core/idempotency.js",
-      "sha256": "96e6a51eb42a06b9b40cd8518cb2346a22b998bd200f997875a898f70b71a0dd",
-      "bytes": 5947
+      "sha256": "72d9a1882476e433e0711de99722926f173e2a1fac717ef422a50a7ef69e6758",
+      "bytes": 6075
     },
     {
       "path": "src/core/ids.js",
-      "sha256": "4fe03e5c38cebcb1ce23bb84500579ca6b17fb6cea0f7078bf20a014e2d0bbc8",
-      "bytes": 1984
+      "sha256": "4798548452ac508654103afbab3167f168be2f8b98f57b02d828c5d9a663e3dd",
+      "bytes": 3867
     },
     {
       "path": "src/core/integrity.js",
@@ -83,8 +83,8 @@
     },
     {
       "path": "src/core/kernel.js",
-      "sha256": "57585fec8ede4a1f1fdf41f2851305f1d0708f1a0fa8619c7d68bf075a4777ee",
-      "bytes": 4670
+      "sha256": "8f06795207959c56d8da1d3ce67183e539071e266557e5fa6823a7699061cf27",
+      "bytes": 4714
     },
     {
       "path": "src/core/memory.js",
@@ -138,7 +138,7 @@
     }
   ],
   "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEANr0v938r/sXU0xfIBdKg965w58c6bxa+qiC2X+mHDwo=\n-----END PUBLIC KEY-----",
-  "signature": "db5fe9727f35e26ed20a85634d5d2ab9e422034a47e2f4cddb0119cc7862d3dc4643397db4c574fa8648253b262e02cf627fdc340c240685c3c9fb6142554a00",
-  "previousRoot": "e728dc67ecea52fa47ba01da45361d269942f6e19225a753b532240776ee3f2d",
-  "sealNumber": 16
+  "signature": "f934f4b9f95cc7b75c96c73da6bf35a24e19b04253ddfd13b01a48ae0c39200809f38aefc3db225093953f379d6e58501b16c45f13297c4ed536e541254e4508",
+  "previousRoot": "1f2e80252095c7c8193582600f5ecc107cf5fd8223530d29c8bd2497c4d96f9f",
+  "sealNumber": 17
 }

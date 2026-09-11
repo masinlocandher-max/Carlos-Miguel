@@ -19,7 +19,7 @@
  *   - revocable      FMB can revoke before consumption
  */
 import { JsonTable } from './store.js';
-import { canonicalHash, newId, shortRef, safeEqual } from './ids.js';
+import { canonicalJson, domainDigest, newId, shortRef, safeEqual } from './ids.js';
 import { systemClock } from './clock.js';
 import { ApprovalRequiredError, ValidationError, NotFoundError, PolicyError } from './errors.js';
 import { EVENT } from './audit.js';
@@ -37,13 +37,42 @@ export const APPROVAL_STATE = Object.freeze({
 
 export const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
+export const APPROVAL_DOMAIN = 'JEWEL_APPROVAL_V1';
+
+/**
+ * Describe the capability an approval is granted against.
+ *
+ * Binding this matters: if a later build changes `email.send` from
+ * gate:'email.send', risk:high to something permissive, an approval granted
+ * under the old terms must not still authorise the new ones. Changing the
+ * descriptor changes the binding, so the old grant simply stops matching.
+ *
+ * @param {{ name:string, risk:string, gate?:string|null, sideEffect?:boolean }} cap
+ */
+export function capabilityTag(cap) {
+  if (!cap) return '';
+  return `${cap.name}:${cap.risk}:${cap.gate ?? '-'}:${cap.sideEffect ? 'fx' : 'ro'}`;
+}
+
 /**
  * The canonical binding for an action. Everything that changes the real-world
- * effect must be inside this object, or the binding is a lie.
- * @param {{ action:string, payload:object, account?:string|null }} req
+ * effect must be inside it, or the binding is a lie.
+ *
+ * Domain-separated and length-framed (see `domainDigest`): the digest is valid
+ * only as an approval binding, and component boundaries are explicit in the
+ * hashed stream rather than implied by the serializer.
+ *
+ * @param {{ action:string, payload:object, account?:string|null,
+ *           capability?:object|string|null }} req
  */
-export function bindingHash({ action, payload, account = null }) {
-  return canonicalHash({ action, account, payload });
+export function bindingHash({ action, payload, account = null, capability = null }) {
+  const capTag = typeof capability === 'string' ? capability : capabilityTag(capability);
+  return domainDigest(APPROVAL_DOMAIN, [
+    ['action', action],
+    ['account', account],
+    ['capability', capTag],
+    ['payload', canonicalJson(payload)],
+  ]);
 }
 
 export class ApprovalQueue {
@@ -65,11 +94,11 @@ export class ApprovalQueue {
    *           effects?:string[], ttlMs?:number }} req
    */
   request(req) {
-    const { action, payload, account = null, risk, summary } = req;
+    const { action, payload, account = null, risk, summary, capability = null } = req;
     if (!action || typeof action !== 'string') throw new ValidationError('action is required');
     if (!summary || typeof summary !== 'string') throw new ValidationError('summary is required');
 
-    const binding = bindingHash({ action, payload, account });
+    const binding = bindingHash({ action, payload, account, capability });
 
     const open = this.table.list((r) => r.binding === binding && r.state === APPROVAL_STATE.PENDING);
     for (const existing of open) {
@@ -85,6 +114,7 @@ export class ApprovalQueue {
       binding,
       action,
       account,
+      capability: typeof capability === 'string' ? capability : capabilityTag(capability),
       risk,
       summary,
       effects: req.effects ?? [],
@@ -153,7 +183,7 @@ export class ApprovalQueue {
    * whose binding matches this exact payload - or throws.
    *
    * This is the function INV-1 and INV-2 live in.
-   * @param {{ action:string, payload:object, account?:string|null }} req
+   * @param {{ action:string, payload:object, account?:string|null, capability?:object|string|null }} req
    */
   requireGrant(req) {
     const binding = bindingHash(req);

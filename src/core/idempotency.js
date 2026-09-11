@@ -20,7 +20,7 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppendLog } from './store.js';
-import { canonicalHash } from './ids.js';
+import { domainDigest } from './ids.js';
 import { systemClock } from './clock.js';
 import { EVENT } from './audit.js';
 
@@ -39,8 +39,14 @@ export const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
  * scope for actions that are inherently repeatable (e.g. a daily brief).
  * @param {{ action:string, binding:string, scope?:string }} input
  */
+export const IDEMPOTENCY_DOMAIN = 'JEWEL_IDEMPOTENCY_V1';
+
 export function idempotencyKey({ action, binding, scope = null }) {
-  return canonicalHash({ action, binding, scope });
+  return domainDigest(IDEMPOTENCY_DOMAIN, [
+    ['action', action],
+    ['binding', binding],
+    ['scope', scope],
+  ]);
 }
 
 export class IdempotencyLedger {

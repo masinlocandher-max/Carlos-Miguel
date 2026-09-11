@@ -99,7 +99,12 @@ export class Executor {
     }
 
     // 3. Approval binding ---------------------------------------------------
-    const binding = bindingHash({ action: capability.gate ?? name, payload: args, account: capability.account });
+    // The capability descriptor is part of the binding: an approval granted
+    // while email.send was gated must not survive a build that ungates it.
+    const binding = bindingHash({
+      action: capability.gate ?? name, payload: args,
+      account: capability.account, capability,
+    });
     const idemKey = idempotencyKey({ action: capability.gate ?? name, binding, scope: ctx.scope ?? null });
     const needsLedger = decision.obligations.includes('idempotency-claim');
 
@@ -126,7 +131,10 @@ export class Executor {
 
     if (decision.requiresApproval) {
       try {
-        grant = this.approvals.requireGrant({ action: capability.gate ?? name, payload: args, account: capability.account });
+        grant = this.approvals.requireGrant({
+          action: capability.gate ?? name, payload: args,
+          account: capability.account, capability,
+        });
       } catch (err) {
         const e = toJewelError(err);
         if (!(e instanceof ApprovalRequiredError)) throw e;
@@ -137,6 +145,7 @@ export class Executor {
             action: capability.gate ?? name,
             payload: args,
             account: capability.account,
+            capability,
             risk: capability.risk,
             summary: tool.summarize ? tool.summarize(args) : `${name} with ${Object.keys(args).length} argument(s)`,
             effects: decision.obligations,

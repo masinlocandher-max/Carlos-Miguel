@@ -28,7 +28,7 @@ import { AgentLoop } from './agent/loop.js';
 import { JsonTable, dataDir } from './store.js';
 import { systemClock } from './clock.js';
 import { CONSTITUTION } from './constitution.js';
-import { canonicalHash } from './ids.js';
+import { domainDigest } from './ids.js';
 
 /**
  * @param {{ root:string, config:object, clock?:object, model?:object,
@@ -79,7 +79,7 @@ export async function boot(opts) {
     ? new AgentLoop({ model, registry, executor, planner, audit, approvals, seal, maxSteps: config.maxSteps })
     : null;
 
-  const capabilityFingerprint = canonicalHash(registry.fingerprintParts());
+  const capabilityFingerprint = domainDigest('JEWEL_CAPABILITY_V1', registry.fingerprintParts().map((p) => ['cap', p]));
 
   audit.write(EVENT.BOOT, {
     mode: config.mode,

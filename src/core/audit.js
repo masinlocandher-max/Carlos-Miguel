@@ -13,11 +13,17 @@
  * (constitution FORBIDDEN: 'audit.rewrite').
  */
 import { AppendLog } from './store.js';
-import { canonicalHash, newId } from './ids.js';
+import { canonicalJson, domainDigest, newId } from './ids.js';
 import { redact } from './redact.js';
 import { systemClock } from './clock.js';
 
 export const GENESIS = '0'.repeat(64);
+export const AUDIT_DOMAIN = 'JEWEL_AUDIT_V1';
+
+/** Chain hash for one record. Domain-separated so it is valid only as a link. */
+function recordHash(body) {
+  return domainDigest(AUDIT_DOMAIN, [['prev', body.prev], ['record', canonicalJson(body)]]);
+}
 
 /** Event names are stable API. Add, never repurpose. */
 export const EVENT = Object.freeze({
@@ -84,7 +90,7 @@ export class AuditLog {
       data: redact(data),
       prev,
     };
-    const record = { ...body, hash: canonicalHash(body) };
+    const record = { ...body, hash: recordHash(body) };
     this.log.append(record);
     return record;
   }
@@ -112,7 +118,7 @@ export class AuditLog {
       if (rec.__corrupt) return { ok: false, length: all.length, brokenAt: i, reason: 'corrupt-record' };
       if (rec.prev !== prev) return { ok: false, length: all.length, brokenAt: i, reason: 'prev-mismatch' };
       const { hash, ...body } = rec;
-      if (canonicalHash(body) !== hash) return { ok: false, length: all.length, brokenAt: i, reason: 'hash-mismatch' };
+      if (recordHash(body) !== hash) return { ok: false, length: all.length, brokenAt: i, reason: 'hash-mismatch' };
       prev = hash;
     }
     return { ok: true, length: all.length, brokenAt: null, reason: null };
