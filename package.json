@@ -8,7 +8,7 @@
   "bin": { "jewel": "./jewel.mjs" },
   "scripts": {
     "jewel": "node jewel.mjs",
-    "test": "node --test test/",
+    "test": "node --test \"test/**/*.test.js\"",
     "seal": "node tools/seal-cli.mjs seal",
     "verify": "node tools/seal-cli.mjs verify",
     "serve": "node jewel.mjs serve",
